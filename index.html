@@ -123,9 +123,13 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2.5 self-start lg:self-auto">
+                <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+                    <button onclick="syncConfiguredGoogleSheet(true)" id="btnSyncGsheetHeader" class="px-3 py-2 text-xs font-semibold rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 transition flex items-center gap-1.5" title="Sinkronkan ulang data dari URL Google Sheets CSV">
+                        <svg id="iconSyncGsheet" class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span>Sync GSheet Live</span>
+                    </button>
                     <button onclick="resetToDefaultData()" class="px-3 py-2 text-xs font-medium rounded-xl bg-card hover:bg-cardHover text-slate-300 border border-borderSubtle transition flex items-center gap-1.5" title="Kembalikan ke data riil tersemat">
-                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         <span>Reset Data Riil</span>
                     </button>
                     <button onclick="toggleImportModal(true)" class="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-accent hover:opacity-95 text-white shadow-lg shadow-purple-500/25 transition flex items-center gap-2">
@@ -517,16 +521,16 @@
             </div>
 
             <div class="px-6 pt-4 border-b border-borderSubtle flex gap-2 bg-pitch/40">
-                <button onclick="switchModalTab('file')" id="tabBtnFile" class="px-4 py-2 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white -mb-px">
-                    1. Upload File CSV (.csv)
+                <button onclick="switchModalTab('gsheet')" id="tabBtnGsheet" class="px-4 py-2 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white -mb-px">
+                    1. Link Google Sheets CSV (Live)
                 </button>
-                <button onclick="switchModalTab('gsheet')" id="tabBtnGsheet" class="px-4 py-2 text-xs font-medium rounded-t-xl text-slate-400 hover:text-white transition">
-                    2. Link Google Sheets CSV
+                <button onclick="switchModalTab('file')" id="tabBtnFile" class="px-4 py-2 text-xs font-medium rounded-t-xl text-slate-400 hover:text-white transition">
+                    2. Upload File CSV (.csv)
                 </button>
             </div>
 
             <div class="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
-                <div id="modalTabFile" class="space-y-4">
+                <div id="modalTabFile" class="hidden space-y-4">
                     <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-purple-500 rounded-2xl p-6 text-center bg-pitch/60 transition cursor-pointer" onclick="document.getElementById('csvFileInput').click()">
                         <div class="w-12 h-12 rounded-2xl bg-gradient-accent/20 border border-purple-500/30 flex items-center justify-center mx-auto mb-3 text-purple-300">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
@@ -545,16 +549,19 @@
                     </div>
                 </div>
 
-                <div id="modalTabGsheet" class="hidden space-y-3">
-                    <label class="block text-xs font-semibold text-slate-300">URL Google Sheets (Publikasikan sebagai CSV)</label>
+                <div id="modalTabGsheet" class="space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="block text-xs font-semibold text-slate-300">URL Google Sheets (Publikasikan sebagai CSV)</label>
+                        <button type="button" onclick="useDefaultGsheetUrl()" class="text-[11px] text-emerald-400 hover:text-emerald-300 underline font-medium">Gunakan URL GSheet Terpasang</button>
+                    </div>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="url" id="gsheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../pub?gid=...&single=true&output=csv" class="flex-1 bg-pitch border border-borderSubtle rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
-                        <button onclick="fetchGoogleSheetsCSV()" class="px-4 py-2.5 rounded-xl bg-gradient-accent hover:opacity-95 text-white text-xs font-semibold transition shrink-0">
+                        <input type="url" id="gsheetUrlInput" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTOXtpPGPHcFfLfpRF1YmMlFPWQu5n721T58-cCFe3Sw_sbR9ypep_PMgXb6afIG_s3q0qo6i4m6s_Y/pub?gid=20938979&single=true&output=csv" placeholder="https://docs.google.com/spreadsheets/d/.../pub?gid=...&single=true&output=csv" class="flex-1 bg-pitch border border-borderSubtle rounded-xl px-3.5 py-2.5 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+                        <button type="button" onclick="fetchGoogleSheetsCSV()" class="px-4 py-2.5 rounded-xl bg-gradient-accent hover:opacity-95 text-white text-xs font-semibold transition shrink-0">
                             Muat Data Live
                         </button>
                     </div>
                     <p class="text-[11px] text-slate-400 leading-relaxed">
-                        Panduan: Buka Google Sheets &rarr; pilih sheet <strong>FA DJP - PCS</strong> &rarr; klik <em>File &rarr; Bagikan &rarr; Publikasikan ke web</em> &rarr; pilih sheet <strong>FA DJP - PCS</strong> dan format <strong>Comma-separated values (.csv)</strong>.
+                        URL Google Sheets CSV Anda sudah terpasang secara bawaan dan akan disimpan otomatis ke browser. Klik <strong>Muat Data Live</strong> kapan saja untuk menarik pembaruan terbaru dari sheet <code class="text-blue-300">gid=20938979</code>.
                     </p>
                 </div>
 
@@ -575,7 +582,7 @@
 
             <div class="px-6 py-3.5 border-t border-borderSubtle bg-pitch/60 flex items-center justify-end gap-2.5">
                 <button onclick="toggleImportModal(false)" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition">Tutup</button>
-                <button id="btnApplyCsvText" onclick="processTextareaCSV()" class="px-4 py-2 rounded-xl bg-gradient-accent text-white text-xs font-semibold shadow-lg shadow-purple-500/25 hover:opacity-95 transition">
+                <button id="btnApplyCsvText" onclick="processTextareaCSV()" class="hidden px-4 py-2 rounded-xl bg-gradient-accent text-white text-xs font-semibold shadow-lg shadow-purple-500/25 hover:opacity-95 transition">
                     Proses Teks CSV
                 </button>
             </div>
@@ -608,6 +615,33 @@
             "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
         ];
+
+        const DEFAULT_GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOXtpPGPHcFfLfpRF1YmMlFPWQu5n721T58-cCFe3Sw_sbR9ypep_PMgXb6afIG_s3q0qo6i4m6s_Y/pub?gid=20938979&single=true&output=csv";
+        const STORAGE_KEY_GSHEET_URL = "fa_pcs_djp_gsheet_csv_url_v1";
+
+        function getSavedGsheetUrl() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_GSHEET_URL);
+                return (saved && saved.trim()) ? saved.trim() : DEFAULT_GSHEET_CSV_URL;
+            } catch (_) {
+                return DEFAULT_GSHEET_CSV_URL;
+            }
+        }
+
+        function saveGsheetUrl(url) {
+            try {
+                if (url && url.trim()) {
+                    localStorage.setItem(STORAGE_KEY_GSHEET_URL, url.trim());
+                }
+            } catch (_) {}
+        }
+
+        function useDefaultGsheetUrl() {
+            const inp = document.getElementById('gsheetUrlInput');
+            if (inp) inp.value = DEFAULT_GSHEET_CSV_URL;
+            saveGsheetUrl(DEFAULT_GSHEET_CSV_URL);
+            showToast('URL Google Sheets bawaan dipasang.');
+        }
 
         function createEmptyMatrix31() {
             const obj = {};
@@ -1059,9 +1093,9 @@
                             <thead>
                                 <tr class="text-[11px] text-slate-400 border-b border-borderSubtle">
                                     <th class="px-3.5 py-2 text-left">Bisnis Area</th>
-                                    <th class="px-3 py-2 text-right">Selesai Dikerjakan</th>
-                                    <th class="px-3 py-2 text-right text-emerald-300">Diterima Hari Sama</th>
-                                    <th class="px-3 py-2 text-right text-slate-400">Dari Hari Sebelumnya</th>
+                                    <th class="px-3.5 py-2 text-right">Selesai Dikerjakan</th>
+                                    <th class="px-3.5 py-2 text-right text-emerald-300">Diterima Hari Sama</th>
+                                    <th class="px-3.5 py-2 text-right text-slate-400">Dari Hari Sebelumnya</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-borderSubtle/50">
@@ -1077,9 +1111,9 @@
                                     return `
                                         <tr class="hover:bg-cardHover">
                                             <td class="px-3.5 py-2 font-medium text-white">${a}</td>
-                                            <td class="px-3 py-2 text-right font-mono text-slate-200">${fmt(dVal)}</td>
-                                            <td class="px-3 py-2 text-right font-mono font-semibold text-emerald-400">${fmt(sVal)}</td>
-                                            <td class="px-3 py-2 text-right font-mono text-slate-400">${fmt(prevVal)}</td>
+                                            <td class="px-3.5 py-2 text-right font-mono text-slate-200">${fmt(dVal)}</td>
+                                            <td class="px-3.5 py-2 text-right font-mono font-semibold text-emerald-400">${fmt(sVal)}</td>
+                                            <td class="px-3.5 py-2 text-right font-mono text-slate-400">${fmt(prevVal)}</td>
                                         </tr>
                                     `;
                                 }).join('')}
@@ -1124,7 +1158,7 @@
                         </div>
                     `;
                 } else {
-                    rowsTableHtml = `<p class="text-slate-400 bg-pitch/60 border border-borderSubtle rounded-xl p-3.5">Tidak ada FA yang diterima sekaligus selesai dikerjakan pada tanggal ${dateStr} di dalam file CSV yang diunggah.</p>`;
+                    rowsTableHtml = `<p class="text-slate-400 bg-pitch/60 border border-borderSubtle rounded-xl p-3.5">Tidak ada FA yang diterima sekaligus selesai dikerjakan pada tanggal ${dateStr} di dalam sumber data aktif.</p>`;
                 }
             }
 
@@ -1149,8 +1183,8 @@
 
             if (footEl) {
                 footEl.textContent = exactMode
-                    ? "Dihitung langsung dari kecocokan tanggal Receive Date & Work Date pada file CSV."
-                    : "Estimasi berdasarkan data tersemat; unggah CSV penuh untuk melihat daftar FA per baris.";
+                    ? "Dihitung langsung dari kecocokan tanggal Receive Date & Work Date pada data aktif."
+                    : "Estimasi berdasarkan data tersemat; sinkronkan Google Sheets Live untuk kecocokan per baris.";
             }
 
             modal.classList.remove('hidden');
@@ -1158,32 +1192,6 @@
         }
         window.inspectSameDayWork = inspectSameDayWork;
         window.closeSameDayModal = closeSameDayModal;
-
-        function renderDailyMatrixSection() {
-            const m = state.matrixMonth;
-            const monthName = (MONTH_NAMES_ID[m] || '').toUpperCase();
-            const container = document.getElementById('dailyMatrixContainer');
-            const titleEl = document.getElementById('matrixMainTitle');
-            if (!container) return;
-
-            const dataDiterima = appData.diterimaByMonth[m] || createEmptyMatrix31();
-            const dataDikerjakan = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
-            const dataSameDay = (appData.sameDayByMonth && appData.sameDayByMonth[m]) || createEmptyMatrix31();
-
-            if (state.matrixMetric === 'diterima') {
-                if (titleEl) titleEl.textContent = `FA DITERIMA PCS - DJP PADA BULAN ${monthName} 2026`;
-                container.innerHTML = buildSingleMatrixHtml(`FA DITERIMA • ${monthName} 2026 (Berdasarkan Day Receive Date)`, dataDiterima, 'blue', { monthNum: m });
-            } else if (state.matrixMetric === 'dikerjakan') {
-                if (titleEl) titleEl.textContent = `FA DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
-                container.innerHTML = buildSingleMatrixHtml(`FA SELESAI DIKERJAKAN • ${monthName} 2026 (Berdasarkan Tgl Work Date)`, dataDikerjakan, 'purple', { monthNum: m, interactiveSameDay: true, sameDayMatrix: dataSameDay });
-            } else {
-                if (titleEl) titleEl.textContent = `FA DITERIMA & DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
-                container.innerHTML =
-                    buildSingleMatrixHtml(`1. FA DITERIMA • ${monthName} 2026 (Day Receive Date)`, dataDiterima, 'blue', { monthNum: m }) +
-                    buildSingleMatrixHtml(`2. FA SELESAI DIKERJAKAN • ${monthName} 2026 (Tgl Work Date)`, dataDikerjakan, 'purple', { monthNum: m, interactiveSameDay: true, sameDayMatrix: dataSameDay });
-            }
-        }
-        window.switchSheet = switchSheet;
 
         // =========================================================================
         // 4. SHEET 1: TOP PIVOT CARDS & KPI STRIP
@@ -1296,7 +1304,7 @@
             const badgeEl = document.getElementById('datasetSourceBadge');
             if (badgeEl) {
                 badgeEl.textContent = appData.isCustom
-                    ? `Data CSV Unggahan (${fmt(appData.totalRows)} FA)`
+                    ? `Google Sheets Live (${fmt(appData.totalRows)} FA)`
                     : `Data Riil Tersemat (${fmt(appData.totalRows)} FA)`;
             }
             const diagEl = document.getElementById('datasetDiagnosticsText');
@@ -1388,102 +1396,6 @@
             renderDailyMatrixSection();
         }
 
-        function buildSingleMatrixHtml(titleBanner, matrixData, accentColor = 'blue') {
-            const colTotals = new Array(31).fill(0);
-            let maxCellVal = 0;
-
-            CANONICAL_AREAS.forEach(area => {
-                const arr = matrixData[area] || new Array(31).fill(0);
-                arr.forEach((v, idx) => {
-                    if (v > maxCellVal) maxCellVal = v;
-                    colTotals[idx] += v;
-                });
-            });
-
-            let headerCols = '';
-            for (let d = 1; d <= 31; d++) {
-                headerCols += `<th class="px-1.5 py-2 text-center font-semibold text-slate-400 border-l border-borderSubtle/60 min-w-[34px]">${d}</th>`;
-            }
-
-            let bodyHtml = '';
-            let grandTotalAll = 0;
-
-            CANONICAL_AREAS.forEach(area => {
-                const arr = matrixData[area] || new Array(31).fill(0);
-                let rowSum = 0;
-                let cellsHtml = '';
-
-                arr.forEach(val => {
-                    rowSum += val;
-                    let cellBg = '';
-                    let textCol = 'text-slate-600';
-
-                    if (val > 0) {
-                        const ratio = maxCellVal > 0 ? val / maxCellVal : 0;
-                        if (ratio >= 0.72) {
-                            cellBg = 'bg-purple-500/40';
-                            textCol = 'text-purple-100 font-bold';
-                        } else if (ratio >= 0.38) {
-                            cellBg = 'bg-blue-500/25';
-                            textCol = 'text-blue-200 font-semibold';
-                        } else {
-                            cellBg = 'bg-slate-800/45';
-                            textCol = 'text-slate-300';
-                        }
-                    }
-
-                    cellsHtml += `<td class="px-1 py-2 text-center border-l border-borderSubtle/40 ${cellBg} ${textCol}">${val === 0 ? '-' : val}</td>`;
-                });
-
-                grandTotalAll += rowSum;
-
-                bodyHtml += `
-                    <tr class="border-b border-borderSubtle/60 hover:bg-cardHover transition-colors">
-                        <td class="sticky-col-left px-3.5 py-2 font-sans font-medium text-xs text-slate-200 whitespace-nowrap border-r border-borderSubtle shadow-[4px_0_8px_rgba(0,0,0,0.4)]">${area}</td>
-                        ${cellsHtml}
-                        <td class="sticky-col-right px-3 py-2 text-right font-bold text-white border-l border-borderSubtle shadow-[-4px_0_8px_rgba(0,0,0,0.4)]">${fmt(rowSum)}</td>
-                    </tr>
-                `;
-            });
-
-            let footerCols = '';
-            colTotals.forEach(sum => {
-                footerCols += `<td class="px-1 py-2.5 text-center font-bold text-slate-200 border-l border-borderSubtle/50">${sum}</td>`;
-            });
-
-            const badgeColor = accentColor === 'purple'
-                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                : 'bg-blue-500/15 text-blue-300 border-blue-500/30';
-
-            return `
-                <div>
-                    <div class="px-4 sm:px-6 py-2.5 bg-pitch/50 border-b border-borderSubtle/70 flex items-center justify-between">
-                        <span class="text-xs font-bold tracking-wide text-white">${titleBanner}</span>
-                        <span class="px-2 py-0.5 text-[11px] font-mono rounded-md border ${badgeColor}">Total: ${fmt(grandTotalAll)} FA</span>
-                    </div>
-                    <div class="overflow-x-auto relative">
-                        <table class="w-full text-[11px] font-mono border-collapse tabular-nums">
-                            <thead>
-                                <tr class="bg-pitch/90 text-[11px] border-b border-borderSubtle">
-                                    <th class="sticky-col-left px-3.5 py-2 text-left font-sans font-semibold text-slate-300 border-r border-borderSubtle min-w-[175px]">Bisnis Area</th>
-                                    ${headerCols}
-                                    <th class="sticky-col-right px-3 py-2 text-right font-sans font-semibold text-blue-400 border-l border-borderSubtle min-w-[82px]">Grand Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>${bodyHtml}</tbody>
-                            <tfoot>
-                                <tr class="bg-slate-900/95 border-t border-slate-700">
-                                    <td class="sticky-col-left px-3.5 py-2.5 font-sans font-bold text-xs text-white border-r border-borderSubtle">Grand Total</td>
-                                    ${footerCols}
-                                    <td class="sticky-col-right px-3 py-2.5 text-right font-bold text-purple-300 border-l border-borderSubtle">${fmt(grandTotalAll)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            `;
-        }
-
         function renderDailyMatrixSection() {
             const m = state.matrixMonth;
             const monthName = (MONTH_NAMES_ID[m] || '').toUpperCase();
@@ -1493,18 +1405,19 @@
 
             const dataDiterima = appData.diterimaByMonth[m] || createEmptyMatrix31();
             const dataDikerjakan = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
+            const dataSameDay = (appData.sameDayByMonth && appData.sameDayByMonth[m]) || createEmptyMatrix31();
 
             if (state.matrixMetric === 'diterima') {
                 if (titleEl) titleEl.textContent = `FA DITERIMA PCS - DJP PADA BULAN ${monthName} 2026`;
-                container.innerHTML = buildSingleMatrixHtml(`FA DITERIMA • ${monthName} 2026 (Berdasarkan Day Receive Date)`, dataDiterima, 'blue');
+                container.innerHTML = buildSingleMatrixHtml(`FA DITERIMA • ${monthName} 2026 (Berdasarkan Day Receive Date)`, dataDiterima, 'blue', { monthNum: m });
             } else if (state.matrixMetric === 'dikerjakan') {
                 if (titleEl) titleEl.textContent = `FA DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
-                container.innerHTML = buildSingleMatrixHtml(`FA SELESAI DIKERJAKAN • ${monthName} 2026 (Berdasarkan Tgl Work Date)`, dataDikerjakan, 'purple');
+                container.innerHTML = buildSingleMatrixHtml(`FA SELESAI DIKERJAKAN • ${monthName} 2026 (Berdasarkan Tgl Work Date)`, dataDikerjakan, 'purple', { monthNum: m, interactiveSameDay: true, sameDayMatrix: dataSameDay });
             } else {
                 if (titleEl) titleEl.textContent = `FA DITERIMA & DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
                 container.innerHTML =
-                    buildSingleMatrixHtml(`1. FA DITERIMA • ${monthName} 2026 (Day Receive Date)`, dataDiterima, 'blue') +
-                    buildSingleMatrixHtml(`2. FA SELESAI DIKERJAKAN • ${monthName} 2026 (Tgl Work Date)`, dataDikerjakan, 'purple');
+                    buildSingleMatrixHtml(`1. FA DITERIMA • ${monthName} 2026 (Day Receive Date)`, dataDiterima, 'blue', { monthNum: m }) +
+                    buildSingleMatrixHtml(`2. FA SELESAI DIKERJAKAN • ${monthName} 2026 (Tgl Work Date)`, dataDikerjakan, 'purple', { monthNum: m, interactiveSameDay: true, sameDayMatrix: dataSameDay });
             }
         }
 
@@ -1853,10 +1766,10 @@
             const modeTag = document.getElementById('explorerModeTag');
             if (modeTag) {
                 if (appData.isSampleExplorer) {
-                    modeTag.textContent = `Sampel Representatif Riil (${rows.length} baris) — Unggah CSV untuk seluruh 43.589 baris`;
+                    modeTag.textContent = `Sampel Representatif Riil (${rows.length} baris) — Sinkronkan GSheet / CSV untuk seluruh data`;
                     modeTag.className = 'px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30';
                 } else {
-                    modeTag.textContent = `Dataset Penuh CSV (${fmt(appData.rawRows.length)} baris)`;
+                    modeTag.textContent = `Dataset Live / CSV (${fmt(appData.rawRows.length)} baris)`;
                     modeTag.className = 'px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
                 }
             }
@@ -2030,10 +1943,10 @@
             return rows;
         }
 
-        function parseSheetFaDjpPcs(csvText) {
+        function parseSheetFaDjpPcs(csvText, sourceLabel = 'CSV') {
             const cleanText = csvText.replace(/^\uFEFF/, '');
             const sampleLines = cleanText.split(/\r?\n/).slice(0, 6).filter(l => l.trim().length > 0);
-            if (sampleLines.length === 0) throw new Error("File CSV kosong.");
+            if (sampleLines.length === 0) throw new Error("Data CSV kosong.");
 
             let headerSampleLine = sampleLines[0];
             for (const line of sampleLines) {
@@ -2200,7 +2113,7 @@
                 });
             }
 
-            if (validCount === 0) throw new Error("Tidak ada baris transaksi valid yang terbaca dari file CSV.");
+            if (validCount === 0) throw new Error("Tidak ada baris transaksi valid yang terbaca dari sumber CSV.");
 
             const monthOrderMap = { Jan:1, Feb:2, Mar:3, Apr:4, Mei:5, May:5, Jun:6, Jul:7, Agu:8, Aug:8, Sep:9, Okt:10, Oct:10, Nov:11, Des:12, Dec:12 };
             const sortedWeeklyLabels = Array.from(weeklyIntervalSet).sort((a, b) => {
@@ -2219,7 +2132,8 @@
                 finalWeeklyByArea[area] = sortedWeeklyLabels.map(lbl => weeklyMapByArea[area][lbl] || 0);
             });
 
-            const diagMsg = `Berhasil memuat ${fmt(validCount)} baris dari header baris ke-${headerRowIdx + 1} (pemisah '${delimiter}'), ${fmt(normalizedCaseFixes)} baris area diseragamkan`;
+            const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const diagMsg = `${sourceLabel}: ${fmt(validCount)} baris terbaca (header baris ke-${headerRowIdx + 1}, pemisah '${delimiter}') • Sync ${nowTime}`;
 
             appData = {
                 isCustom: true,
@@ -2246,6 +2160,8 @@
             const modal = document.getElementById('importModal');
             if (!modal) return;
             if (show) {
+                const inp = document.getElementById('gsheetUrlInput');
+                if (inp && !inp.value.trim()) inp.value = getSavedGsheetUrl();
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             } else {
@@ -2286,16 +2202,20 @@
             box.textContent = msg;
         }
 
-        function handleCsvPayload(csvText) {
+        function handleCsvPayload(csvText, sourceLabel = 'CSV', autoCloseModal = true) {
             try {
-                const diag = parseSheetFaDjpPcs(csvText);
+                const diag = parseSheetFaDjpPcs(csvText, sourceLabel);
                 refreshAllSheets();
                 showModalDiagnostic(diag, false);
                 showToast(diag, 'success');
-                setTimeout(() => toggleImportModal(false), 900);
+                if (autoCloseModal) {
+                    setTimeout(() => toggleImportModal(false), 850);
+                }
+                return true;
             } catch (err) {
                 showModalDiagnostic('Gagal memproses CSV: ' + err.message, true);
                 showToast(err.message, 'error');
+                return false;
             }
         }
 
@@ -2305,7 +2225,7 @@
             showModalDiagnostic(`Membaca file "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB)...`, false);
             const reader = new FileReader();
             reader.onload = (e) => {
-                handleCsvPayload(e.target.result);
+                handleCsvPayload(e.target.result, `File ${file.name}`);
                 event.target.value = '';
             };
             reader.readAsText(file);
@@ -2318,25 +2238,51 @@
                 showToast('Pilih file .csv atau tempel teks CSV terlebih dahulu.', 'error');
                 return;
             }
-            handleCsvPayload(text);
+            handleCsvPayload(text, 'Teks CSV Manual');
+        }
+
+        async function loadGsheetFromUrl(rawUrl, options = {}) {
+            const { silentOnFail = false, autoCloseModal = true } = options;
+            const url = (rawUrl || '').trim();
+            if (!url) {
+                showToast('Masukkan tautan Google Sheets CSV terlebih dahulu.', 'error');
+                return false;
+            }
+
+            saveGsheetUrl(url);
+            const iconSync = document.getElementById('iconSyncGsheet');
+            if (iconSync) iconSync.classList.add('animate-spin');
+
+            try {
+                showModalDiagnostic('Mengunduh data CSV langsung dari Google Sheets...', false);
+                const cacheBuster = url.includes('?') ? `&_ts=${Date.now()}` : `?_ts=${Date.now()}`;
+                const resp = await fetch(url + cacheBuster, { cache: 'no-store' });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status} - Gagal mengakses tautan Google Sheets.`);
+                const csvText = await resp.text();
+                return handleCsvPayload(csvText, 'Google Sheets Live', autoCloseModal);
+            } catch (err) {
+                const errMsg = `Gagal memuat dari Google Sheets: ${err.message}`;
+                showModalDiagnostic(errMsg, true);
+                if (!silentOnFail) {
+                    showToast('Gagal memuat tautan Google Sheets. Menampilkan data tersemat.', 'error');
+                }
+                return false;
+            } finally {
+                if (iconSync) iconSync.classList.remove('animate-spin');
+            }
         }
 
         async function fetchGoogleSheetsCSV() {
             const inp = document.getElementById('gsheetUrlInput');
-            const url = inp ? inp.value.trim() : '';
-            if (!url) {
-                showToast('Masukkan tautan Google Sheets CSV terlebih dahulu.', 'error');
-                return;
-            }
-            try {
-                showModalDiagnostic('Mengunduh data CSV dari Google Sheets...', false);
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status} - Gagal mengakses tautan.`);
-                const csvText = await resp.text();
-                handleCsvPayload(csvText);
-            } catch (err) {
-                showModalDiagnostic('Gagal memuat dari Google Sheets: ' + err.message, true);
-                showToast('Gagal memuat tautan Google Sheets.', 'error');
+            const url = inp ? inp.value.trim() : getSavedGsheetUrl();
+            await loadGsheetFromUrl(url, { silentOnFail: false, autoCloseModal: true });
+        }
+
+        async function syncConfiguredGoogleSheet(showFeedback = true) {
+            const url = getSavedGsheetUrl();
+            const ok = await loadGsheetFromUrl(url, { silentOnFail: !showFeedback, autoCloseModal: false });
+            if (!ok && showFeedback) {
+                showToast('Sinkronisasi GSheet gagal; periksa publikasi CSV di Google Sheets.', 'error');
             }
         }
 
@@ -2374,7 +2320,11 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            const inp = document.getElementById('gsheetUrlInput');
+            if (inp) inp.value = getSavedGsheetUrl();
+
             refreshAllSheets();
+            syncConfiguredGoogleSheet(false);
 
             const dropZone = document.getElementById('dropZone');
             if (dropZone) {
@@ -2391,7 +2341,7 @@
                     const file = e.dataTransfer.files[0];
                     if (file) {
                         const reader = new FileReader();
-                        reader.onload = (ev) => handleCsvPayload(ev.target.result);
+                        reader.onload = (ev) => handleCsvPayload(ev.target.result, `File ${file.name}`);
                         reader.readAsText(file);
                     }
                 });
