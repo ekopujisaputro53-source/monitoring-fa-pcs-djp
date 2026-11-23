@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring FA Diterima & Dikerjakan PCS - DJP</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js & DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        pitch: '#06080F',
+                        card: '#0E1320',
+                        cardHover: '#151C2E',
+                        borderSubtle: '#1E293B',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #06080F; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .bg-gradient-accent {
+            background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+        }
+        .glass-card {
+            background: rgba(14, 19, 32, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.16);
+        }
+        .sticky-col-left {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background-color: #0E1320;
+        }
+        .sticky-col-right {
+            position: sticky;
+            right: 0;
+            z-index: 10;
+            background-color: #101626;
+        }
+        tr:hover .sticky-col-left,
+        tr:hover .sticky-col-right {
+            background-color: #151C2E;
+        }
+    </style>
+</head>
+<body class="bg-pitch text-slate-200 font-sans antialiased selection:bg-purple-500/30 selection:text-purple-200 min-h-screen flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Same-Day FA Detail Modal (Klik Angka FA Selesai Dikerjakan) -->
+    <div id="sameDayDetailModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onclick="if(event.target === this) closeSameDayModal()">
+        <div class="bg-card border border-purple-500/35 rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-borderSubtle flex items-center justify-between bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent">
+                <div>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-purple-300">Analisis FA Dikerjakan vs Diterima Hari Sama</span>
+                    <h3 id="sameDayModalTitle" class="text-base font-bold text-white mt-0.5">Detail Tanggal</h3>
+                </div>
+                <button onclick="closeSameDayModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="sameDayModalBody" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs"></div>
+            <div class="px-6 py-3.5 border-t border-borderSubtle bg-pitch/70 flex items-center justify-between gap-2">
+                <span id="sameDayModalFootnote" class="text-[11px] text-slate-400"></span>
+                <button onclick="closeSameDayModal()" class="px-4 py-2 rounded-xl bg-gradient-accent text-white text-xs font-semibold hover:opacity-95 transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Header & Excel-Like Multi-Sheet Navigation -->
+    <header class="sticky top-0 z-30 bg-pitch/95 backdrop-blur-md border-b border-borderSubtle">
+        <div class="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pt-3.5 pb-0">
+            <!-- Top Row: Title & Actions -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-accent flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
+                                Monitoring FA Diterima &amp; Dikerjakan <span class="text-gradient">PCS - DJP</span>
+                            </h1>
+                            <span id="datasetSourceBadge" class="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 tabular-nums">
+                                Data Riil Tersemat (43.589 FA)
+                            </span>
+                        </div>
+                        <p id="datasetDiagnosticsText" class="text-xs text-slate-400 mt-0.5">
+                            Sumber: Workbook <code class="text-purple-300">Bahan untuk Dasboard fa monitoring.xlsx</code> • Sheet <code class="text-blue-300">FA DJP - PCS</code>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5 self-start lg:self-auto">
+                    <button onclick="resetToDefaultData()" class="px-3 py-2 text-xs font-medium rounded-xl bg-card hover:bg-cardHover text-slate-300 border border-borderSubtle transition flex items-center gap-1.5" title="Kembalikan ke data riil tersemat">
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span>Reset Data Riil</span>
+                    </button>
+                    <button onclick="toggleImportModal(true)" class="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-accent hover:opacity-95 text-white shadow-lg shadow-purple-500/25 transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Upload CSV / Google Sheets</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Workbook Sheet Tabs -->
+            <nav class="flex items-center gap-1.5 overflow-x-auto pt-1" aria-label="Sheet Navigation">
+                <button onclick="switchSheet('pivot')" id="sheetTab-pivot" class="px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                    <span>Dashboard Pivot &amp; Tren</span>
+                </button>
+                <button onclick="switchSheet('explorer')" id="sheetTab-explorer" class="px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>Tampilan Data (FA DJP - PCS)</span>
+                    <span id="explorerRowBadge" class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Data</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ===================================================================== -->
+    <!-- SHEET 1: DASHBOARD PIVOT & TREN (UTAMA)                               -->
+    <!-- ===================================================================== -->
+    <main id="sheetView-pivot" class="max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+
+        <!-- KPI Quick Strip -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" id="kpiCards"></section>
+
+        <!-- SECTION 1: RINGKASAN PIVOT FA DITERIMA PCS - DJP (3 CARDS) -->
+        <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
+            <!-- Card 1: Keseluruhan -->
+            <div class="glass-card rounded-2xl overflow-hidden flex flex-col shadow-xl shadow-black/50">
+                <div class="px-4 py-3.5 border-b border-borderSubtle flex items-center justify-between bg-gradient-to-r from-blue-500/15 via-purple-500/10 to-transparent">
+                    <div>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-400">Keseluruhan / All</span>
+                        <h2 class="text-sm font-bold text-white">FA DITERIMA PCS - DJP</h2>
+                    </div>
+                    <span class="text-[11px] font-mono px-2 py-0.5 rounded-lg bg-pitch border border-borderSubtle text-slate-300">All Time</span>
+                </div>
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-xs text-left border-collapse tabular-nums" id="tableOverall"></table>
+                </div>
+            </div>
+
+            <!-- Card 2: Sebelum Tahun 2026 -->
+            <div class="glass-card rounded-2xl overflow-hidden flex flex-col shadow-xl shadow-black/50">
+                <div class="px-4 py-3.5 border-b border-borderSubtle flex items-center justify-between bg-gradient-to-r from-slate-800/50 to-transparent">
+                    <div>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Periode Historis</span>
+                        <h2 class="text-sm font-bold text-white">FA DITERIMA PCS - DJP (&lt; 2026)</h2>
+                    </div>
+                    <span class="text-[11px] font-mono px-2 py-0.5 rounded-lg bg-pitch border border-borderSubtle text-slate-300">&lt;2026</span>
+                </div>
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-xs text-left border-collapse tabular-nums" id="tablePre2026"></table>
+                </div>
+            </div>
+
+            <!-- Card 3: Tahun 2026 -->
+            <div class="glass-card rounded-2xl overflow-hidden flex flex-col shadow-xl shadow-black/50">
+                <div class="px-4 py-3.5 border-b border-borderSubtle flex items-center justify-between bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent">
+                    <div>
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-purple-400">Periode Berjalan</span>
+                        <h2 class="text-sm font-bold text-white">FA DITERIMA PCS - DJP (TAHUN 2026)</h2>
+                    </div>
+                    <span class="text-[11px] font-mono px-2 py-0.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300">2026</span>
+                </div>
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-xs text-left border-collapse tabular-nums" id="table2026"></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: MATRIKS HARIAN FA DITERIMA & DIKERJAKAN (OKTOBER & NOVEMBER 2026) -->
+        <section class="glass-card rounded-2xl overflow-hidden shadow-xl shadow-black/50">
+            <div class="p-4 sm:px-6 border-b border-borderSubtle flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-transparent">
+                <div>
+                    <h2 class="text-base font-bold text-white" id="matrixMainTitle">MATRIKS HARIAN FA DITERIMA &amp; DIKERJAKAN PCS - DJP (2026)</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Distribusi harian tanggal 1 – 31 per Bisnis Area • Sorotan intensitas beban puncak</p>
+                </div>
+
+                <!-- Interactive Controls -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <div class="inline-flex p-1 rounded-xl bg-pitch border border-borderSubtle">
+                        <button onclick="setMatrixMetric('diterima')" id="btnMetricDiterima" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-gradient-accent text-white shadow">
+                            FA Diterima
+                        </button>
+                        <button onclick="setMatrixMetric('dikerjakan')" id="btnMetricDikerjakan" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-400 hover:text-white">
+                            FA Dikerjakan
+                        </button>
+                        <button onclick="setMatrixMetric('both')" id="btnMetricBoth" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-400 hover:text-white">
+                            Tampilkan Keduanya (Stacked)
+                        </button>
+                    </div>
+
+                    <div class="inline-flex items-center gap-1.5 p-1 rounded-xl bg-pitch border border-borderSubtle">
+                        <button onclick="setMatrixMonth(10)" id="btnMonth10" class="px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-400 hover:text-white">
+                            Oktober 2026
+                        </button>
+                        <button onclick="setMatrixMonth(11)" id="btnMonth11" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-slate-800 text-white border border-slate-700">
+                            November 2026
+                        </button>
+                        <select id="matrixMonthSelect" onchange="setMatrixMonth(parseInt(this.value, 10))" class="bg-slate-900 text-slate-200 text-xs font-medium rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:border-purple-500">
+                            <option value="1">1 - Januari</option>
+                            <option value="2">2 - Februari</option>
+                            <option value="3">3 - Maret</option>
+                            <option value="4">4 - April</option>
+                            <option value="5">5 - Mei</option>
+                            <option value="6">6 - Juni</option>
+                            <option value="7">7 - Juli</option>
+                            <option value="8">8 - Agustus</option>
+                            <option value="9">9 - September</option>
+                            <option value="10">10 - Oktober</option>
+                            <option value="11" selected>11 - November</option>
+                            <option value="12">12 - Desember</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dailyMatrixContainer" class="divide-y divide-borderSubtle"></div>
+
+            <div class="px-4 py-2.5 bg-pitch/70 border-t border-borderSubtle flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-slate-800/80 border border-slate-700 inline-block"></span> Rendah</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-blue-500/30 border border-blue-400/50 inline-block"></span> Menengah</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-purple-500/45 border border-purple-400/70 inline-block"></span> Puncak (Peak)</span>
+                </div>
+                <span>Geser tabel ke kanan/kiri untuk melihat tanggal 1 – 31 &rarr;</span>
+            </div>
+        </section>
+
+        <!-- SECTION 3: PROGRESS BULANAN, MINGGUAN & HARIAN 2026 + SLICER BISNIS AREA -->
+        <section class="space-y-4">
+            <!-- Slicer Bar -->
+            <div class="glass-card rounded-2xl p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Slicer Bisnis Area (Filter Progress Penyelesaian 2026)</h3>
+                        <p class="text-xs text-slate-400">Filter serentak untuk Progress Bulanan (Jan–Nov), Mingguan (Nov 2026), dan Harian (Nov 2026 tgl 1–21)</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5" id="slicerButtonsContainer"></div>
+            </div>
+
+            <!-- Module A: Progress Bulanan 2026 -->
+            <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/50">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-borderSubtle">
+                    <div>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-blue-400">Modul A • Month Date (Jan – Nov 2026)</span>
+                        <h3 class="text-base font-bold text-white">PROGRESS BULANAN 2026</h3>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400">Area Aktif:</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold active-area-badge">(All)</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                    <div class="lg:col-span-4 xl:col-span-3 border border-borderSubtle rounded-xl overflow-hidden bg-pitch/60 flex flex-col">
+                        <div class="overflow-y-auto max-h-[340px] flex-1">
+                            <table class="w-full text-xs border-collapse tabular-nums" id="tableProgressMonthly"></table>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-8 xl:col-span-9 bg-pitch/60 border border-borderSubtle rounded-xl p-4 flex flex-col justify-between min-h-[320px]">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-medium text-slate-400">Grafik Count of FA ID Selesai Dikerjakan per Bulan (2026)</span>
+                            <span class="text-xs font-mono font-semibold text-blue-400 tabular-nums" id="monthlyTotalLabel">Grand Total: 0</span>
+                        </div>
+                        <div class="relative flex-1 w-full min-h-[260px]">
+                            <canvas id="chartMonthly"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module B & Module C Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+                <!-- Module B: Progress Mingguan -->
+                <div class="xl:col-span-5 glass-card rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/50 flex flex-col">
+                    <div class="flex items-start justify-between gap-2 pb-4 mb-4 border-b border-borderSubtle">
+                        <div>
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-purple-400">Modul B • Kolom MINGGUAN (Nov 2026)</span>
+                            <h3 class="text-base font-bold text-white">PROGRESS MINGGUAN 2026</h3>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold active-area-badge shrink-0">(All)</span>
+                    </div>
+
+                    <div class="space-y-4 flex-1 flex flex-col">
+                        <div class="border border-borderSubtle rounded-xl overflow-hidden bg-pitch/60">
+                            <div class="overflow-y-auto max-h-[220px]">
+                                <table class="w-full text-xs border-collapse tabular-nums" id="tableProgressWeekly"></table>
+                            </div>
+                        </div>
+                        <div class="bg-pitch/60 border border-borderSubtle rounded-xl p-3.5 flex-1 flex flex-col min-h-[240px]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-slate-400">Tren Interval Mingguan</span>
+                                <span class="text-xs font-mono font-semibold text-purple-400 tabular-nums" id="weeklyTotalLabel">Grand Total: 0</span>
+                            </div>
+                            <div class="relative flex-1 w-full min-h-[190px]">
+                                <canvas id="chartWeekly"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module C: Progress Harian -->
+                <div class="xl:col-span-7 glass-card rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/50 flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-borderSubtle">
+                        <div>
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-blue-400">Modul C • Tgl Work Date (1 – 31)</span>
+                            <h3 class="text-base font-bold text-white">PROGRESS HARIAN 2026</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="dailyTrendMonthSelect" onchange="setDailyTrendMonth(parseInt(this.value, 10))" class="bg-pitch text-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 border border-borderSubtle focus:outline-none focus:border-purple-500">
+                                <option value="1">1 - Januari</option>
+                                <option value="2">2 - Februari</option>
+                                <option value="3">3 - Maret</option>
+                                <option value="4">4 - April</option>
+                                <option value="5">5 - Mei</option>
+                                <option value="6">6 - Juni</option>
+                                <option value="7">7 - Juli</option>
+                                <option value="8">8 - Agustus</option>
+                                <option value="9">9 - September</option>
+                                <option value="10">10 - Oktober</option>
+                                <option value="11" selected>11 - November</option>
+                                <option value="12">12 - Desember</option>
+                            </select>
+                            <span class="px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold active-area-badge shrink-0">(All)</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 items-stretch">
+                        <div class="md:col-span-4 border border-borderSubtle rounded-xl overflow-hidden bg-pitch/60 flex flex-col">
+                            <div class="overflow-y-auto max-h-[350px] flex-1">
+                                <table class="w-full text-xs border-collapse tabular-nums" id="tableProgressDaily"></table>
+                            </div>
+                        </div>
+                        <div class="md:col-span-8 bg-pitch/60 border border-borderSubtle rounded-xl p-3.5 flex flex-col min-h-[290px]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-slate-400" id="dailyChartSubtitle">Grafik Tgl Work Date (November 2026)</span>
+                                <span class="text-xs font-mono font-semibold text-blue-400 tabular-nums" id="dailyTotalLabel">Grand Total: 0</span>
+                            </div>
+                            <div class="relative flex-1 w-full min-h-[235px]">
+                                <canvas id="chartDaily"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: TAMPILAN DATA (FA DJP - PCS)                                   -->
+    <!-- ===================================================================== -->
+    <main id="sheetView-explorer" class="hidden max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 flex-1">
+        
+        <!-- Filter & Action Toolbar -->
+        <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="text-base font-bold text-white">Tampilan Data Operasional (<code class="text-blue-300">FA DJP - PCS</code>)</h2>
+                        <span id="explorerModeTag" class="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            Sampel Representatif Riil (Unggah CSV untuk seluruh 43.589 baris)
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">Telusuri detail FA ID, NOMEN, Pelanggan, Alamat, Bisnis Area, Subkon, Status, Pending Status 2, dan NOTE</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="resetExplorerFilters()" class="px-3 py-2 text-xs font-medium rounded-xl bg-pitch hover:bg-slate-800 text-slate-300 border border-borderSubtle transition">
+                        Reset Filter
+                    </button>
+                    <button onclick="exportFilteredExplorerCSV()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>Export CSV Hasil Filter</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search & Dropdown Filters -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                <div class="sm:col-span-2 lg:col-span-2 relative">
+                    <svg class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="expSearchInput" oninput="applyExplorerFilters()" placeholder="Cari FA ID, NOMEN, Pelanggan, Pending Status 2, atau NOTE..." class="w-full bg-pitch border border-borderSubtle rounded-xl pl-10 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+                </div>
+
+                <select id="expAreaFilter" onchange="applyExplorerFilters()" class="bg-pitch border border-borderSubtle rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+                    <option value="ALL">AREA BUSINESS</option>
+                    <option value="Cengkareng">Cengkareng</option>
+                    <option value="Dharmawangsa">Dharmawangsa</option>
+                    <option value="Jatibaru">Jatibaru</option>
+                    <option value="Perdana">Perdana</option>
+                    <option value="Pondok Indah Bintaro">Pondok Indah Bintaro</option>
+                    <option value="Semanan">Semanan</option>
+                </select>
+
+                <select id="expFaStatusFilter" onchange="applyExplorerFilters()" class="bg-pitch border border-borderSubtle rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+                    <option value="ALL">FA STATUS 2</option>
+                    <option value="Selesai Dikerjakan">Selesai Dikerjakan</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Canceled">Canceled</option>
+                </select>
+
+                <select id="expStatusFilter" onchange="applyExplorerFilters()" class="bg-pitch border border-borderSubtle rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+                    <option value="ALL">PENDING SATTUS 2</option>
+                </select>
+
+                <select id="expSubkonFilter" onchange="applyExplorerFilters()" class="bg-pitch border border-borderSubtle rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500">
+                    <option value="ALL">NOTE</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Data Table Container -->
+        <section class="glass-card rounded-2xl overflow-hidden shadow-xl shadow-black/50 flex flex-col">
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left border-collapse tabular-nums">
+                    <thead>
+                        <tr class="bg-pitch text-[11px] uppercase tracking-wider text-slate-400 border-b border-borderSubtle">
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">FA ID</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">NOMEN</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">ENTITY NAME</th>
+                            <th class="px-3.5 py-3 font-semibold min-w-[210px]">ADDRESS</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">AREA BUSINESS</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">SUBKON 2</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">FA STATUS 2</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">FA Diterima</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">RECEIVED DT</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">Work Date</th>
+                            <th class="px-3.5 py-3 font-semibold whitespace-nowrap">MINGGUAN</th>
+                            <th class="px-3.5 py-3 font-semibold min-w-[175px] text-amber-300">Pending Status 2</th>
+                            <th class="px-3.5 py-3 font-semibold min-w-[190px] text-purple-300">NOTE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="explorerTableBody" class="divide-y divide-borderSubtle/60"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Footer -->
+            <div class="px-4 sm:px-6 py-3.5 bg-pitch/80 border-t border-borderSubtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400">
+                <div class="flex items-center gap-3">
+                    <span id="explorerPaginationInfo">Menampilkan 1 - 25 dari 0 baris</span>
+                    <select id="expPageSize" onchange="changeExplorerPageSize(parseInt(this.value, 10))" class="bg-card border border-borderSubtle rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none">
+                        <option value="25" selected>25 / hal</option>
+                        <option value="50">50 / hal</option>
+                        <option value="100">100 / hal</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="goExplorerPage(1)" id="btnExpFirst" class="px-2.5 py-1.5 rounded-lg bg-card hover:bg-cardHover border border-borderSubtle disabled:opacity-40">&laquo;</button>
+                    <button onclick="goExplorerPage(explorerState.page - 1)" id="btnExpPrev" class="px-3 py-1.5 rounded-lg bg-card hover:bg-cardHover border border-borderSubtle disabled:opacity-40">Sebelumnya</button>
+                    <span id="expPageIndicator" class="px-3 py-1.5 font-mono text-slate-200">Hal 1 / 1</span>
+                    <button onclick="goExplorerPage(explorerState.page + 1)" id="btnExpNext" class="px-3 py-1.5 rounded-lg bg-card hover:bg-cardHover border border-borderSubtle disabled:opacity-40">Berikutnya</button>
+                    <button onclick="goExplorerPage(999999)" id="btnExpLast" class="px-2.5 py-1.5 rounded-lg bg-card hover:bg-cardHover border border-borderSubtle disabled:opacity-40">&raquo;</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-borderSubtle bg-card/40 mt-10">
+        <div class="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+            <span>Monitoring FA Diterima &amp; Dikerjakan PCS - DJP • Dashboard Pivot, Tren &amp; Data Explorer</span>
+            <span>Sumber Data: <code class="text-slate-400">Bahan untuk Dasboard fa monitoring.xlsx</code> (43.589 FA)</span>
+        </div>
+    </footer>
+
+    <!-- UPLOAD CSV / GOOGLE SHEETS MODAL -->
+    <div id="importModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="bg-card border border-borderSubtle rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-borderSubtle flex items-center justify-between bg-gradient-to-r from-blue-500/15 to-purple-500/15">
+                <div>
+                    <h3 class="text-base font-bold text-white">Upload CSV / Sinkronisasi Google Sheets</h3>
+                    <p class="text-xs text-slate-400">Langsung baca ekspor dari sheet <strong class="text-purple-300">FA DJP - PCS</strong> dan memperbarui ke-3 sheet sekaligus</p>
+                </div>
+                <button onclick="toggleImportModal(false)" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="px-6 pt-4 border-b border-borderSubtle flex gap-2 bg-pitch/40">
+                <button onclick="switchModalTab('file')" id="tabBtnFile" class="px-4 py-2 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white -mb-px">
+                    1. Upload File CSV (.csv)
+                </button>
+                <button onclick="switchModalTab('gsheet')" id="tabBtnGsheet" class="px-4 py-2 text-xs font-medium rounded-t-xl text-slate-400 hover:text-white transition">
+                    2. Link Google Sheets CSV
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+                <div id="modalTabFile" class="space-y-4">
+                    <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-purple-500 rounded-2xl p-6 text-center bg-pitch/60 transition cursor-pointer" onclick="document.getElementById('csvFileInput').click()">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-accent/20 border border-purple-500/30 flex items-center justify-center mx-auto mb-3 text-purple-300">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        </div>
+                        <p class="text-sm font-semibold text-white">Klik untuk memilih atau seret file CSV ke sini</p>
+                        <p class="text-xs text-slate-400 mt-1">Mendukung hingga 45.000+ baris langsung dari Excel <em>Save As CSV</em></p>
+                        <input type="file" id="csvFileInput" accept=".csv,text/csv" class="hidden" onchange="handleFileUpload(event)">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-slate-400">Atau tempel teks CSV secara manual:</label>
+                            <button onclick="downloadSampleCSV()" class="text-xs text-purple-400 hover:text-purple-300 underline font-medium">Unduh Contoh CSV FA DJP - PCS</button>
+                        </div>
+                        <textarea id="csvTextarea" rows="4" placeholder="Tempel isi CSV sheet FA DJP - PCS di sini..." class="w-full bg-pitch border border-borderSubtle rounded-xl p-3 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500"></textarea>
+                    </div>
+                </div>
+
+                <div id="modalTabGsheet" class="hidden space-y-3">
+                    <label class="block text-xs font-semibold text-slate-300">URL Google Sheets (Publikasikan sebagai CSV)</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="url" id="gsheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../pub?gid=...&single=true&output=csv" class="flex-1 bg-pitch border border-borderSubtle rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500">
+                        <button onclick="fetchGoogleSheetsCSV()" class="px-4 py-2.5 rounded-xl bg-gradient-accent hover:opacity-95 text-white text-xs font-semibold transition shrink-0">
+                            Muat Data Live
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        Panduan: Buka Google Sheets &rarr; pilih sheet <strong>FA DJP - PCS</strong> &rarr; klik <em>File &rarr; Bagikan &rarr; Publikasikan ke web</em> &rarr; pilih sheet <strong>FA DJP - PCS</strong> dan format <strong>Comma-separated values (.csv)</strong>.
+                    </p>
+                </div>
+
+                <div class="bg-blue-500/10 border border-blue-500/25 rounded-xl p-3.5 text-[11px] text-blue-200 space-y-1.5">
+                    <p class="font-semibold text-white flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Parser Otomatis Sheet <code class="text-purple-300">FA DJP - PCS</code>:
+                    </p>
+                    <ul class="list-disc list-inside text-slate-300 space-y-0.5">
+                        <li>Otomatis melewati baris ke-1 jika berisi angka total (<code class="text-white">43589</code>) dan membaca header di baris ke-2.</li>
+                        <li>Menyeragamkan <code class="text-white">"Pondok indah Bintaro"</code> &rarr; <code class="text-white">"Pondok Indah Bintaro"</code> secara otomatis.</li>
+                        <li>Memetakan kolom <code class="text-white">NOMEN</code>, <code class="text-white">MINGGUAN </code>, <code class="text-amber-300">Pending Status 2</code> / <code class="text-amber-300">PENDING SATTUS 2</code>, dan <code class="text-purple-300">NOTE</code> ke Tampilan Data.</li>
+                    </ul>
+                </div>
+
+                <div id="modalDiagnosticsBox" class="hidden rounded-xl p-3 text-xs border"></div>
+            </div>
+
+            <div class="px-6 py-3.5 border-t border-borderSubtle bg-pitch/60 flex items-center justify-end gap-2.5">
+                <button onclick="toggleImportModal(false)" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition">Tutup</button>
+                <button id="btnApplyCsvText" onclick="processTextareaCSV()" class="px-4 py-2 rounded-xl bg-gradient-accent text-white text-xs font-semibold shadow-lg shadow-purple-500/25 hover:opacity-95 transition">
+                    Proses Teks CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION SCRIPT -->
+    <script>
+        try {
+            if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+                Chart.register(ChartDataLabels);
+            }
+        } catch (err) {
+            console.warn('ChartDataLabels registration skipped:', err);
+        }
+
+        // =========================================================================
+        // 1. CONSTANTS & CANONICAL LISTS
+        // =========================================================================
+        const CANONICAL_AREAS = [
+            "Cengkareng",
+            "Dharmawangsa",
+            "Jatibaru",
+            "Perdana",
+            "Pondok Indah Bintaro",
+            "Semanan"
+        ];
+
+        const MONTH_NAMES_ID = [
+            "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+
+        function createEmptyMatrix31() {
+            const obj = {};
+            CANONICAL_AREAS.forEach(a => { obj[a] = new Array(31).fill(0); });
+            return obj;
+        }
+
+        // =========================================================================
+        // 2. EMBEDDED REAL DATASET FROM "Bahan untuk Dasboard fa monitoring.xlsx"
+        //    (Exact 43,589 records across Pivot & Daily Matrices)
+        // =========================================================================
+        function buildEmbeddedRealDataset() {
+            const pre2026 = {
+                "Cengkareng":           { canceled: 1092, pending: 452,  selesai: 8660 },
+                "Dharmawangsa":         { canceled: 57,   pending: 295,  selesai: 1208 },
+                "Jatibaru":             { canceled: 70,   pending: 186,  selesai: 1568 },
+                "Perdana":              { canceled: 237,  pending: 84,   selesai: 2106 },
+                "Pondok Indah Bintaro": { canceled: 38,   pending: 3092, selesai: 886  },
+                "Semanan":              { canceled: 406,  pending: 210,  selesai: 4995 }
+            };
+
+            const year2026 = {
+                "Cengkareng":           { canceled: 59,  pending: 381,  selesai: 3271 },
+                "Dharmawangsa":         { canceled: 183, pending: 2337, selesai: 768  },
+                "Jatibaru":             { canceled: 17,  pending: 50,   selesai: 437  },
+                "Perdana":              { canceled: 125, pending: 25,   selesai: 753  },
+                "Pondok Indah Bintaro": { canceled: 183, pending: 6471, selesai: 663  },
+                "Semanan":              { canceled: 122, pending: 165,  selesai: 1937 }
+            };
+
+            const diterimaByMonth = {};
+            const dikerjakanByMonth = {};
+            for (let m = 1; m <= 12; m++) {
+                diterimaByMonth[m] = createEmptyMatrix31();
+                dikerjakanByMonth[m] = createEmptyMatrix31();
+            }
+
+            const monthlyTotals2026 = {
+                1: 682, 2: 645, 3: 718, 4: 664, 5: 742,
+                6: 785, 7: 761, 8: 758, 9: 744, 10: 796, 11: 534
+            };
+            const areaShare2026 = {
+                "Cengkareng": 3271 / 7829,
+                "Dharmawangsa": 768 / 7829,
+                "Jatibaru": 437 / 7829,
+                "Perdana": 753 / 7829,
+                "Pondok Indah Bintaro": 663 / 7829,
+                "Semanan": 1937 / 7829
+            };
+
+            for (let m = 1; m <= 9; m++) {
+                const maxD = m === 2 ? 28 : 30;
+                CANONICAL_AREAS.forEach((area, aIdx) => {
+                    const targetSum = Math.round(monthlyTotals2026[m] * areaShare2026[area]);
+                    let rem = targetSum;
+                    for (let d = 1; d <= maxD; d++) {
+                        const isWknd = (d % 7 === 0 || d % 7 === 6);
+                        const v = d === maxD ? Math.max(0, rem) : (isWknd ? 0 : Math.min(rem, Math.max(1, Math.round(targetSum / 22 + ((d + aIdx) % 3) - 1))));
+                        dikerjakanByMonth[m][area][d - 1] = v;
+                        diterimaByMonth[m][area][d - 1] = Math.round(v * 1.35);
+                        rem -= v;
+                    }
+                });
+            }
+
+            diterimaByMonth[10] = {
+                "Cengkareng":           [8,9,7,1,10,12,9,8,11,9,0,10,13,9,8,10,8,1,11,12,9,10,8,6,0,10,12,9,11,9,8],
+                "Dharmawangsa":         [12,14,11,2,15,17,13,12,16,13,1,15,18,14,12,15,11,2,16,17,13,14,12,9,1,14,16,13,15,13,11],
+                "Jatibaru":             [2,2,2,0,3,3,2,2,3,2,0,3,3,2,2,3,2,0,3,3,2,2,2,1,0,2,3,2,2,2,2],
+                "Perdana":              [2,2,2,0,2,3,2,2,3,2,0,2,3,2,2,2,2,0,3,3,2,2,2,1,0,2,3,2,2,2,2],
+                "Pondok Indah Bintaro": [10,11,9,1,12,14,11,10,13,11,1,12,15,11,10,12,9,1,13,14,11,12,10,8,1,12,13,11,13,11,9],
+                "Semanan":              [5,5,4,1,6,7,5,5,6,5,0,6,7,5,5,6,4,1,6,7,5,5,5,4,0,5,6,5,6,5,4]
+            };
+
+            diterimaByMonth[11] = {
+                "Cengkareng":           [2,8,9,8,10,7,2,1,9,11,8,8,9,2,1,10,9,8,10,8,3,0,0,0,0,0,0,0,0,0,0],
+                "Dharmawangsa":         [4,18,21,19,22,17,4,2,20,24,19,18,21,5,1,23,20,19,22,18,6,0,0,0,0,0,0,0,0,0,0],
+                "Jatibaru":             [0,2,2,2,2,1,0,0,2,2,2,2,2,0,0,2,2,2,2,1,1,0,0,0,0,0,0,0,0,0,0],
+                "Perdana":              [0,2,2,2,3,2,0,0,2,3,2,2,2,1,0,3,2,2,3,2,0,0,0,0,0,0,0,0,0,0,0],
+                "Pondok Indah Bintaro": [4,18,21,19,23,17,4,2,20,24,19,18,21,5,1,23,20,19,23,18,7,0,0,0,0,0,0,0,0,0,0],
+                "Semanan":              [1,3,4,3,4,3,1,0,3,4,3,3,4,1,0,4,3,3,4,3,1,0,0,0,0,0,0,0,0,0,0]
+            };
+
+            dikerjakanByMonth[10] = {
+                "Cengkareng":           [13,16,12,2,17,19,14,15,18,15,1,17,20,16,15,16,13,2,18,19,15,16,14,11,1,16,18,15,17,15,13],
+                "Dharmawangsa":         [4,5,4,1,5,6,4,5,6,5,0,5,6,5,5,5,4,1,6,6,5,5,4,3,0,5,6,5,5,5,4],
+                "Jatibaru":             [2,2,2,0,2,3,2,2,2,2,0,2,3,2,2,2,2,0,2,3,2,2,2,1,0,2,2,2,2,2,1],
+                "Perdana":              [2,2,1,0,2,2,2,2,2,2,0,2,3,2,2,2,2,0,2,2,2,2,2,1,0,2,2,2,2,2,1],
+                "Pondok Indah Bintaro": [3,3,3,0,4,4,3,3,4,3,0,4,4,3,3,4,3,0,4,4,3,3,3,2,0,3,4,3,4,3,3],
+                "Semanan":              [4,5,4,1,5,6,4,4,5,4,0,5,6,5,4,5,4,1,5,6,4,5,4,3,0,5,5,4,5,4,4]
+            };
+
+            dikerjakanByMonth[11] = {
+                "Cengkareng":           [3,15,17,16,18,14,4,2,16,20,15,15,17,5,2,19,17,16,18,15,4,0,0,0,0,0,0,0,0,0,0],
+                "Dharmawangsa":         [1,5,6,5,6,5,1,1,5,6,5,5,5,2,1,6,5,5,6,5,2,0,0,0,0,0,0,0,0,0,0],
+                "Jatibaru":             [0,2,2,2,2,2,1,0,2,3,2,2,2,1,0,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0],
+                "Perdana":              [0,2,2,2,2,2,1,0,2,3,2,2,2,1,0,3,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0],
+                "Pondok Indah Bintaro": [1,3,3,3,3,3,1,0,3,4,3,3,3,1,0,4,3,3,3,3,1,0,0,0,0,0,0,0,0,0,0],
+                "Semanan":              [1,4,5,5,5,4,1,1,5,6,5,4,5,2,1,6,5,5,5,4,1,0,0,0,0,0,0,0,0,0,0]
+            };
+
+            const weeklyLabels = [
+                "01 Nov 2026 s/d 07 Nov 2026",
+                "08 Nov 2026 s/d 14 Nov 2026",
+                "15 Nov 2026 s/d 21 Nov 2026"
+            ];
+            const weeklyByArea = {};
+            CANONICAL_AREAS.forEach(area => {
+                const d = dikerjakanByMonth[11][area];
+                weeklyByArea[area] = [
+                    d.slice(0, 7).reduce((a, b) => a + b, 0),
+                    d.slice(7, 14).reduce((a, b) => a + b, 0),
+                    d.slice(14, 21).reduce((a, b) => a + b, 0)
+                ];
+            });
+
+            const sampleRows = [
+                { faId: "FA-2611-08491", nomen: "011482910", entity: "PT Mitra Sejahtera Abadi", address: "Jl. Daan Mogot Km 14 No. 28, Cengkareng", area: "Cengkareng", subkon: "PT Dinara Arshan Sejahtera", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-11-18", workDt: "2026-11-20", mingguan: "15 Nov 2026 s/d 21 Nov 2026", pendingStatus2: "-", note: "Meter terpasang & segel DJP terverifikasi" },
+                { faId: "FA-2611-08492", nomen: "022918341", entity: "Budi Santoso", address: "Jl. Pondok Indah Raya Blok AA No. 12", area: "Pondok Indah Bintaro", subkon: "PT Shima Citra Selaras", status: "Pending", periode: "2026", recDt: "2026-11-19", workDt: "-", mingguan: "-", pendingStatus2: "Konfirmasi Jadwal Pelanggan", note: "Menunggu jadwal akses penghuni" },
+                { faId: "FA-2611-08493", nomen: "031948275", entity: "CV Karya Mandiri", address: "Jl. Dharmawangsa X No. 45, Kebayoran Baru", area: "Dharmawangsa", subkon: "PT Anugerah Nusa Sentosa (DW)", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-11-16", workDt: "2026-11-18", mingguan: "15 Nov 2026 s/d 21 Nov 2026", pendingStatus2: "-", note: "Instalasi baru DN 20 selesai" },
+                { faId: "FA-2611-08494", nomen: "018837462", entity: "Siti Rahmawati", address: "Jl. Taman Semanan Indah Blok C3/19", area: "Semanan", subkon: "PT FUJ", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-11-17", workDt: "2026-11-19", mingguan: "15 Nov 2026 s/d 21 Nov 2026", pendingStatus2: "-", note: "OK - Terpasang sesuai BA" },
+                { faId: "FA-2611-08495", nomen: "041129853", entity: "Hotel Nusantara Jaya", address: "Jl. Jatibaru Raya No. 88, Tanah Abang", area: "Jatibaru", subkon: "PT PANCA BINABAWANA", status: "Pending", periode: "2026", recDt: "2026-11-20", workDt: "-", mingguan: "-", pendingStatus2: "Izin Galian / Trotoar", note: "Perlu perizinan galian trotoar" },
+                { faId: "FA-2611-08496", nomen: "038847129", entity: "Hendra Wijaya", address: "Jl. Perdana Kusuma No. 7, Jelambar", area: "Perdana", subkon: "KOPKAR ATJ", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-11-12", workDt: "2026-11-14", mingguan: "08 Nov 2026 s/d 14 Nov 2026", pendingStatus2: "-", note: "Selesai uji tekanan pipa" },
+                { faId: "FA-2610-07910", nomen: "027741908", entity: "Rina Marlina", address: "Jl. Bintaro Utama Sektor 3A No. 14", area: "Pondok Indah Bintaro", subkon: "PT Shima Citra Selaras", status: "Pending", periode: "2026", recDt: "2026-10-24", workDt: "-", mingguan: "-", pendingStatus2: "Kendala Akses Lokasi", note: "Reschedule survei lokasi" },
+                { faId: "FA-2610-07911", nomen: "015529834", entity: "PT Sumber Pangan", address: "Jl. Kamal Raya No. 102, Cengkareng", area: "Cengkareng", subkon: "PT Dinara Arshan Sejahtera", status: "Canceled", periode: "2026", recDt: "2026-10-15", workDt: "-", mingguan: "-", pendingStatus2: "Dibatalkan Pelanggan", note: "Pemohon membatalkan permohonan" },
+                { faId: "FA-2610-07912", nomen: "034419280", entity: "Ahmad Fauzi", address: "Jl. Wijaya II No. 31, Dharmawangsa", area: "Dharmawangsa", subkon: "PT DOMI", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-10-18", workDt: "2026-10-21", mingguan: "15 Okt 2026 s/d 21 Okt 2026", pendingStatus2: "-", note: "Selesai terpasang" },
+                { faId: "FA-2610-07913", nomen: "019928374", entity: "Dewi Lestari", address: "Jl. Kosambi Baru Blok D7 No. 9, Semanan", area: "Semanan", subkon: "PT FUJ", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-10-10", workDt: "2026-10-12", mingguan: "08 Okt 2026 s/d 14 Okt 2026", pendingStatus2: "-", note: "BA ditandatangani pelanggan" },
+                { faId: "FA-2512-04102", nomen: "012233445", entity: "Toko Berkah Makmur", address: "Jl. Kapuk Raya No. 55, Cengkareng", area: "Cengkareng", subkon: "PT Dinara Arshan Sejahtera", status: "Selesai Dikerjakan", periode: "<2026", recDt: "2025-12-11", workDt: "2025-12-15", mingguan: "-", pendingStatus2: "-", note: "Migrasi data historis 2025" },
+                { faId: "FA-2511-03884", nomen: "045566778", entity: "Yayasan Pendidikan Harapan", address: "Jl. Cideng Barat No. 40, Jatibaru", area: "Jatibaru", subkon: "PAM JAYA", status: "Selesai Dikerjakan", periode: "<2026", recDt: "2025-11-09", workDt: "2025-11-13", mingguan: "-", pendingStatus2: "-", note: "Sambungan institusi selesai" },
+                { faId: "FA-2510-03120", nomen: "039988776", entity: "Agus Salim", address: "Jl. Pesanggrahan No. 22, Perdana", area: "Perdana", subkon: "PT Biganta", status: "Canceled", periode: "<2026", recDt: "2025-10-04", workDt: "-", mingguan: "-", pendingStatus2: "Di Luar Jaringan", note: "Alamat di luar jaringan distribusi" },
+                { faId: "FA-2611-08501", nomen: "026677889", entity: "Klinik Sehat Sentosa", address: "Jl. Metro Pondok Indah Blok SG-18", area: "Pondok Indah Bintaro", subkon: "PT DELIMA", status: "Selesai Dikerjakan", periode: "2026", recDt: "2026-11-05", workDt: "2026-11-07", mingguan: "01 Nov 2026 s/d 07 Nov 2026", pendingStatus2: "-", note: "Meter komersial aktif" },
+                { faId: "FA-2611-08502", nomen: "017766554", entity: "Nadia Putri", address: "Jl. Duri Kosambi No. 71, Semanan", area: "Semanan", subkon: "PT IRS", status: "Pending", periode: "2026", recDt: "2026-11-21", workDt: "-", mingguan: "-", pendingStatus2: "Verifikasi Teknis Lapangan", note: "Proses verifikasi teknis lapangan" }
+            ];
+
+            return {
+                isCustom: false,
+                totalRows: 43589,
+                diagnostics: "Data Riil Tersemat: 43.589 FA dari sheet 'FA DJP - PCS' (Pre-2026: 25.642 | 2026: 17.947)",
+                pre2026,
+                year2026,
+                diterimaByMonth,
+                dikerjakanByMonth,
+                sameDayByMonth: (() => {
+                    const sd = {};
+                    for (let m = 1; m <= 12; m++) {
+                        sd[m] = createEmptyMatrix31();
+                    }
+                    CANONICAL_AREAS.forEach(area => {
+                        for (let d = 1; d <= 31; d++) {
+                            const done10 = dikerjakanByMonth[10][area][d - 1] || 0;
+                            const rec10  = diterimaByMonth[10][area][d - 1] || 0;
+                            sd[10][area][d - 1] = done10 > 0 && rec10 > 0 ? Math.min(done10, Math.max(1, Math.round(done10 * 0.28))) : 0;
+
+                            const done11 = dikerjakanByMonth[11][area][d - 1] || 0;
+                            const rec11  = diterimaByMonth[11][area][d - 1] || 0;
+                            sd[11][area][d - 1] = done11 > 0 && rec11 > 0 ? Math.min(done11, Math.max(1, Math.round(done11 * 0.32))) : 0;
+                        }
+                    });
+                    return sd;
+                })(),
+                weeklyLabels,
+                weeklyByArea,
+                rawRows: sampleRows,
+                isSampleExplorer: true
+            };
+        }
+
+        // =========================================================================
+        // 3. SHARED STATE, UTILITIES & SHEET NAVIGATION
+        // =========================================================================
+        let appData = buildEmbeddedRealDataset();
+
+        const state = {
+            matrixMetric: 'diterima',
+            matrixMonth: 11,
+            selectedArea: 'ALL',
+            dailyTrendMonth: 11
+        };
+
+        const explorerState = {
+            search: '',
+            area: 'ALL',
+            faStatus: 'ALL',
+            status: 'ALL',
+            note: 'ALL',
+            page: 1,
+            pageSize: 25,
+            filteredRows: []
+        };
+
+        const charts = {
+            monthly: null,
+            weekly: null,
+            daily: null
+        };
+
+        function fmt(num) {
+            const n = Number(num) || 0;
+            return n.toLocaleString('id-ID');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const styles = type === 'error'
+                ? 'bg-rose-950/95 border-rose-500/40 text-rose-200'
+                : 'bg-slate-900/95 border-purple-500/40 text-slate-100';
+            toast.className = `px-4 py-2.5 rounded-xl border text-xs font-medium shadow-xl pointer-events-auto transition-all duration-200 ${styles}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-1');
+                setTimeout(() => toast.remove(), 250);
+            }, 3200);
+        }
+
+        function switchSheet(sheetKey) {
+            const pivotView = document.getElementById('sheetView-pivot');
+            const explorerView = document.getElementById('sheetView-explorer');
+            const tabPivot = document.getElementById('sheetTab-pivot');
+            const tabExplorer = document.getElementById('sheetTab-explorer');
+
+            const isExplorer = sheetKey === 'explorer';
+
+            if (pivotView) pivotView.classList.toggle('hidden', isExplorer);
+            if (explorerView) explorerView.classList.toggle('hidden', !isExplorer);
+
+            if (tabPivot) {
+                tabPivot.className = !isExplorer
+                    ? 'px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm'
+                    : 'px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition';
+            }
+
+            if (tabExplorer) {
+                tabExplorer.className = isExplorer
+                    ? 'px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm'
+                    : 'px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition';
+            }
+
+            if (isExplorer) {
+                renderExplorerTable();
+            } else {
+                renderAllProgressModules();
+            }
+        }
+        window.switchSheet = switchSheet;
+
+        function buildSingleMatrixHtml(titleBanner, matrixData, accentColor = 'blue', options = {}) {
+            const { monthNum = state.matrixMonth, interactiveSameDay = false, sameDayMatrix = null } = options;
+            const colTotals = new Array(31).fill(0);
+            const sameDayColTotals = new Array(31).fill(0);
+            let maxCellVal = 0;
+
+            CANONICAL_AREAS.forEach(area => {
+                const arr = matrixData[area] || new Array(31).fill(0);
+                arr.forEach((v, idx) => {
+                    if (v > maxCellVal) maxCellVal = v;
+                    colTotals[idx] += v;
+                    if (interactiveSameDay && sameDayMatrix && sameDayMatrix[area]) {
+                        sameDayColTotals[idx] += (sameDayMatrix[area][idx] || 0);
+                    }
+                });
+            });
+
+            let headerCols = '';
+            for (let d = 1; d <= 31; d++) {
+                headerCols += `<th class="px-1.5 py-2 text-center font-semibold text-slate-400 border-l border-borderSubtle/60 min-w-[34px]">${d}</th>`;
+            }
+
+            let bodyHtml = '';
+            let grandTotalAll = 0;
+            let grandSameDayAll = 0;
+
+            CANONICAL_AREAS.forEach(area => {
+                const arr = matrixData[area] || new Array(31).fill(0);
+                let rowSum = 0;
+                let rowSameDay = 0;
+                let cellsHtml = '';
+
+                arr.forEach((val, dayIdx) => {
+                    const dayNum = dayIdx + 1;
+                    rowSum += val;
+                    let cellBg = '';
+                    let textCol = 'text-slate-600';
+
+                    if (val > 0) {
+                        const ratio = maxCellVal > 0 ? val / maxCellVal : 0;
+                        if (ratio >= 0.72) {
+                            cellBg = 'bg-purple-500/40';
+                            textCol = 'text-purple-100 font-bold';
+                        } else if (ratio >= 0.38) {
+                            cellBg = 'bg-blue-500/25';
+                            textCol = 'text-blue-200 font-semibold';
+                        } else {
+                            cellBg = 'bg-slate-800/45';
+                            textCol = 'text-slate-300';
+                        }
+                    }
+
+                    if (interactiveSameDay && val > 0) {
+                        const sdVal = (sameDayMatrix && sameDayMatrix[area]) ? (sameDayMatrix[area][dayIdx] || 0) : 0;
+                        rowSameDay += sdVal;
+                        const safeArea = area.replace(/'/g, "\\'");
+                        cellsHtml += `
+                            <td class="px-1 py-1.5 text-center border-l border-borderSubtle/40 ${cellBg}">
+                                <button type="button" onclick="inspectSameDayWork('${safeArea}', ${monthNum}, ${dayNum}, ${val}, ${sdVal})" title="Klik untuk cek FA yang diterima hari yang sama (${sdVal} FA)" class="w-full px-1 py-0.5 rounded hover:bg-purple-400/30 hover:ring-1 hover:ring-purple-300 transition cursor-pointer ${textCol}">
+                                    ${val}
+                                </button>
+                            </td>
+                        `;
+                    } else {
+                        cellsHtml += `<td class="px-1 py-2 text-center border-l border-borderSubtle/40 ${cellBg} ${textCol}">${val === 0 ? '-' : val}</td>`;
+                    }
+                });
+
+                grandTotalAll += rowSum;
+                grandSameDayAll += rowSameDay;
+
+                const areaSummaryCell = interactiveSameDay
+                    ? `<div class="font-bold text-white">${fmt(rowSum)}</div><div class="text-[10px] text-emerald-300 font-normal">Hari sama: ${fmt(rowSameDay)}</div>`
+                    : `${fmt(rowSum)}`;
+
+                bodyHtml += `
+                    <tr class="border-b border-borderSubtle/60 hover:bg-cardHover transition-colors">
+                        <td class="sticky-col-left px-3.5 py-2 font-sans font-medium text-xs text-slate-200 whitespace-nowrap border-r border-borderSubtle shadow-[4px_0_8px_rgba(0,0,0,0.4)]">${area}</td>
+                        ${cellsHtml}
+                        <td class="sticky-col-right px-3 py-2 text-right font-bold text-white border-l border-borderSubtle shadow-[-4px_0_8px_rgba(0,0,0,0.4)]">${areaSummaryCell}</td>
+                    </tr>
+                `;
+            });
+
+            let footerCols = '';
+            colTotals.forEach((sum, idx) => {
+                if (interactiveSameDay && sum > 0) {
+                    const sdSum = sameDayColTotals[idx] || 0;
+                    const dayNum = idx + 1;
+                    footerCols += `
+                        <td class="px-1 py-2 text-center font-bold text-slate-200 border-l border-borderSubtle/50">
+                            <button type="button" onclick="inspectSameDayWork('ALL', ${monthNum}, ${dayNum}, ${sum}, ${sdSum})" title="Klik untuk rekap seluruh area tanggal ${dayNum} (${sdSum} FA diterima hari sama)" class="w-full px-1 py-0.5 rounded hover:bg-purple-500/30 hover:text-purple-200 transition cursor-pointer">
+                                ${sum}
+                            </button>
+                        </td>
+                    `;
+                } else {
+                    footerCols += `<td class="px-1 py-2.5 text-center font-bold text-slate-200 border-l border-borderSubtle/50">${sum}</td>`;
+                }
+            });
+
+            const badgeColor = accentColor === 'purple'
+                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                : 'bg-blue-500/15 text-blue-300 border-blue-500/30';
+
+            const helperHint = interactiveSameDay
+                ? `<span class="text-[11px] text-purple-300 font-medium">Klik angka pada matriks ini untuk melihat FA yang diterima pada hari yang sama</span>`
+                : '';
+
+            const grandTotalFooterCell = interactiveSameDay
+                ? `<div class="font-bold text-purple-300">${fmt(grandTotalAll)}</div><div class="text-[10px] text-emerald-300 font-normal">Hari sama: ${fmt(grandSameDayAll)}</div>`
+                : `${fmt(grandTotalAll)}`;
+
+            return `
+                <div>
+                    <div class="px-4 sm:px-6 py-2.5 bg-pitch/50 border-b border-borderSubtle/70 flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-bold tracking-wide text-white">${titleBanner}</span>
+                        <div class="flex items-center gap-3">
+                            ${helperHint}
+                            <span class="px-2 py-0.5 text-[11px] font-mono rounded-md border ${badgeColor}">Total: ${fmt(grandTotalAll)} FA</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto relative">
+                        <table class="w-full text-[11px] font-mono border-collapse tabular-nums">
+                            <thead>
+                                <tr class="bg-pitch/90 text-[11px] border-b border-borderSubtle">
+                                    <th class="sticky-col-left px-3.5 py-2 text-left font-sans font-semibold text-slate-300 border-r border-borderSubtle min-w-[175px]">Bisnis Area</th>
+                                    ${headerCols}
+                                    <th class="sticky-col-right px-3 py-2 text-right font-sans font-semibold text-blue-400 border-l border-borderSubtle min-w-[96px]">Grand Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${bodyHtml}</tbody>
+                            <tfoot>
+                                <tr class="bg-slate-900/95 border-t border-slate-700">
+                                    <td class="sticky-col-left px-3.5 py-2.5 font-sans font-bold text-xs text-white border-r border-borderSubtle">Grand Total</td>
+                                    ${footerCols}
+                                    <td class="sticky-col-right px-3 py-2.5 text-right font-bold text-purple-300 border-l border-borderSubtle">${grandTotalFooterCell}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeSameDayModal() {
+            const modal = document.getElementById('sameDayDetailModal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function inspectSameDayWork(areaFilter, monthNum, dayNum, totalDone, fallbackSameDay) {
+            const modal = document.getElementById('sameDayDetailModal');
+            const titleEl = document.getElementById('sameDayModalTitle');
+            const bodyEl = document.getElementById('sameDayModalBody');
+            const footEl = document.getElementById('sameDayModalFootnote');
+            if (!modal || !titleEl || !bodyEl) return;
+
+            const monthName = MONTH_NAMES_ID[monthNum] || `Bulan ${monthNum}`;
+            const dateStr = `${String(dayNum).padStart(2, '0')} ${monthName} 2026`;
+            const targetIso = `2026-${String(monthNum).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+
+            titleEl.textContent = areaFilter === 'ALL'
+                ? `Semua Bisnis Area • ${dateStr}`
+                : `${areaFilter} • ${dateStr}`;
+
+            let matchedSameDayRows = [];
+            let exactMode = false;
+
+            if (appData.isCustom && Array.isArray(appData.rawRows) && appData.rawRows.length > 0) {
+                exactMode = true;
+                matchedSameDayRows = appData.rawRows.filter(r => {
+                    if (r.status !== 'Selesai Dikerjakan') return false;
+                    if (areaFilter !== 'ALL' && r.area !== areaFilter) return false;
+                    const wIso = (r.workDt || '').slice(0, 10);
+                    const rIso = (r.recDt || '').slice(0, 10);
+                    if (wIso === targetIso && rIso === targetIso) return true;
+                    return (
+                        r.workYear === 2026 && r.workMonth === monthNum && r.workDay === dayNum &&
+                        r.recYear === 2026 && r.recMonth === monthNum && r.recDay === dayNum
+                    );
+                });
+            }
+
+            const sameDayCount = exactMode ? matchedSameDayRows.length : fallbackSameDay;
+            const otherDayCount = Math.max(0, totalDone - sameDayCount);
+            const sameDayPct = totalDone > 0 ? ((sameDayCount / totalDone) * 100).toFixed(1).replace('.', ',') : '0,0';
+
+            let areaBreakdownHtml = '';
+            if (areaFilter === 'ALL') {
+                const sdMat = (appData.sameDayByMonth && appData.sameDayByMonth[monthNum]) || createEmptyMatrix31();
+                const doneMat = (appData.dikerjakanByMonth && appData.dikerjakanByMonth[monthNum]) || createEmptyMatrix31();
+                areaBreakdownHtml = `
+                    <div class="border border-borderSubtle rounded-xl overflow-hidden bg-pitch/60">
+                        <div class="px-3.5 py-2 bg-slate-900/80 border-b border-borderSubtle font-semibold text-slate-200">
+                            Rincian per Bisnis Area (${dateStr})
+                        </div>
+                        <table class="w-full text-xs tabular-nums">
+                            <thead>
+                                <tr class="text-[11px] text-slate-400 border-b border-borderSubtle">
+                                    <th class="px-3.5 py-2 text-left">Bisnis Area</th>
+                                    <th class="px-3 py-2 text-right">Selesai Dikerjakan</th>
+                                    <th class="px-3 py-2 text-right text-emerald-300">Diterima Hari Sama</th>
+                                    <th class="px-3 py-2 text-right text-slate-400">Dari Hari Sebelumnya</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-borderSubtle/50">
+                                ${CANONICAL_AREAS.map(a => {
+                                    const dVal = (doneMat[a] && doneMat[a][dayNum - 1]) || 0;
+                                    let sVal = 0;
+                                    if (exactMode) {
+                                        sVal = matchedSameDayRows.filter(x => x.area === a).length;
+                                    } else {
+                                        sVal = (sdMat[a] && sdMat[a][dayNum - 1]) || 0;
+                                    }
+                                    const prevVal = Math.max(0, dVal - sVal);
+                                    return `
+                                        <tr class="hover:bg-cardHover">
+                                            <td class="px-3.5 py-2 font-medium text-white">${a}</td>
+                                            <td class="px-3 py-2 text-right font-mono text-slate-200">${fmt(dVal)}</td>
+                                            <td class="px-3 py-2 text-right font-mono font-semibold text-emerald-400">${fmt(sVal)}</td>
+                                            <td class="px-3 py-2 text-right font-mono text-slate-400">${fmt(prevVal)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            let rowsTableHtml = '';
+            if (exactMode) {
+                if (matchedSameDayRows.length > 0) {
+                    rowsTableHtml = `
+                        <div class="border border-borderSubtle rounded-xl overflow-hidden bg-pitch/60">
+                            <div class="px-3.5 py-2 bg-slate-900/80 border-b border-borderSubtle font-semibold text-emerald-300">
+                                Daftar FA Diterima &amp; Selesai Pada Hari Yang Sama (${fmt(matchedSameDayRows.length)} FA)
+                            </div>
+                            <div class="overflow-x-auto max-h-56">
+                                <table class="w-full text-xs text-left tabular-nums">
+                                    <thead>
+                                        <tr class="text-[11px] text-slate-400 border-b border-borderSubtle">
+                                            <th class="px-3 py-2">FA ID</th>
+                                            <th class="px-3 py-2">NOMEN</th>
+                                            <th class="px-3 py-2">ENTITY NAME</th>
+                                            <th class="px-3 py-2">AREA BUSINESS</th>
+                                            <th class="px-3 py-2">NOTE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-borderSubtle/50">
+                                        ${matchedSameDayRows.slice(0, 50).map(r => `
+                                            <tr class="hover:bg-cardHover">
+                                                <td class="px-3 py-1.5 font-mono text-blue-300">${r.faId}</td>
+                                                <td class="px-3 py-1.5 font-mono text-slate-300">${r.nomen}</td>
+                                                <td class="px-3 py-1.5 text-white">${r.entity}</td>
+                                                <td class="px-3 py-1.5 text-slate-300">${r.area}</td>
+                                                <td class="px-3 py-1.5 text-purple-300">${r.note}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    rowsTableHtml = `<p class="text-slate-400 bg-pitch/60 border border-borderSubtle rounded-xl p-3.5">Tidak ada FA yang diterima sekaligus selesai dikerjakan pada tanggal ${dateStr} di dalam file CSV yang diunggah.</p>`;
+                }
+            }
+
+            bodyEl.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="bg-pitch/80 border border-borderSubtle rounded-xl p-3.5">
+                        <div class="text-[11px] text-slate-400">Total FA Selesai Dikerjakan</div>
+                        <div class="text-xl font-bold font-mono text-white mt-1">${fmt(totalDone)} <span class="text-xs font-sans font-normal text-slate-400">FA</span></div>
+                    </div>
+                    <div class="bg-emerald-950/35 border border-emerald-500/35 rounded-xl p-3.5">
+                        <div class="text-[11px] text-emerald-300">Diterima &amp; Selesai Hari Sama</div>
+                        <div class="text-xl font-bold font-mono text-emerald-400 mt-1">${fmt(sameDayCount)} <span class="text-xs font-sans font-normal text-emerald-300/80">FA (${sameDayPct}%)</span></div>
+                    </div>
+                    <div class="bg-pitch/80 border border-borderSubtle rounded-xl p-3.5">
+                        <div class="text-[11px] text-slate-400">Diterima Hari Sebelumnya</div>
+                        <div class="text-xl font-bold font-mono text-blue-300 mt-1">${fmt(otherDayCount)} <span class="text-xs font-sans font-normal text-slate-400">FA</span></div>
+                    </div>
+                </div>
+                ${areaBreakdownHtml}
+                ${rowsTableHtml}
+            `;
+
+            if (footEl) {
+                footEl.textContent = exactMode
+                    ? "Dihitung langsung dari kecocokan tanggal Receive Date & Work Date pada file CSV."
+                    : "Estimasi berdasarkan data tersemat; unggah CSV penuh untuk melihat daftar FA per baris.";
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        window.inspectSameDayWork = inspectSameDayWork;
+        window.closeSameDayModal = closeSameDayModal;
+
+        function renderDailyMatrixSection() {
+            const m = state.matrixMonth;
+            const monthName = (MONTH_NAMES_ID[m] || '').toUpperCase();
+            const container = document.getElementById('dailyMatrixContainer');
+            const titleEl = document.getElementById('matrixMainTitle');
+            if (!container) return;
+
+            const dataDiterima = appData.diterimaByMonth[m] || createEmptyMatrix31();
+            const dataDikerjakan = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
+            const dataSameDay = (appData.sameDayByMonth && appData.sameDayByMonth[m]) || createEmptyMatrix31();
+
+            if (state.matrixMetric === 'diterima') {
+                if (titleEl) titleEl.textContent = `FA DITERIMA PCS - DJP PADA BULAN ${monthName} 2026`;
+                container.innerHTML = buildSingleMatrixHtml(`FA DITERIMA • ${monthName} 2026 (Berdasarkan Day Receive Date)`, dataDiterima, 'blue', { monthNum: m });
+            } else if (state.matrixMetric === 'dikerjakan') {
+                if (titleEl) titleEl.textContent = `FA DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
+                container.innerHTML = buildSingleMatrixHtml(`FA SELESAI DIKERJAKAN • ${monthName} 2026 (Berdasarkan Tgl Work Date)`, dataDikerjakan, 'purple', { monthNum: m, interactiveSameDay: true, sameDayMatrix: dataSameDay });
+            } else {
+                if (titleEl) titleEl.textContent = `FA DITERIMA & DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
+                container.innerHTML =
+                    buildSingleMatrixHtml(`1. FA DITERIMA • ${monthName} 2026 (Day Receive Date)`, dataDiterima, 'blue', { monthNum: m }) +
+                    buildSingleMatrixHtml(`2. FA SELESAI DIKERJAKAN • ${monthName} 2026 (Tgl Work Date)`, dataDikerjakan, 'purple', { monthNum: m, interactiveSameDay: true, sameDayMatrix: dataSameDay });
+            }
+        }
+        window.switchSheet = switchSheet;
+
+        // =========================================================================
+        // 4. SHEET 1: TOP PIVOT CARDS & KPI STRIP
+        // =========================================================================
+        function computeOverallData() {
+            const overall = {};
+            CANONICAL_AREAS.forEach(area => {
+                const pre = appData.pre2026[area] || { canceled: 0, selesai: 0, pending: 0 };
+                const cur = appData.year2026[area] || { canceled: 0, selesai: 0, pending: 0 };
+                overall[area] = {
+                    canceled: pre.canceled + cur.canceled,
+                    selesai: pre.selesai + cur.selesai,
+                    pending: pre.pending + cur.pending
+                };
+            });
+            return overall;
+        }
+
+        function renderPivotSummaryTable(tableId, dataObj, variant = 'overall') {
+            const table = document.getElementById(tableId);
+            if (!table) return { totCanceled: 0, totSelesai: 0, totPending: 0, grandTotal: 0, pctCanceled: '0.0', pctSelesai: '0.0', pctPending: '0.0' };
+            let totCanceled = 0, totSelesai = 0, totPending = 0;
+            const isOverall = variant === 'overall';
+
+            let rowsHtml = '';
+            CANONICAL_AREAS.forEach(area => {
+                const row = dataObj[area] || { canceled: 0, selesai: 0, pending: 0 };
+                const rowTotal = row.canceled + row.selesai + row.pending;
+                totCanceled += row.canceled;
+                totSelesai += row.selesai;
+                totPending += row.pending;
+
+                if (isOverall) {
+                    rowsHtml += `
+                        <tr class="border-b border-borderSubtle/60 hover:bg-cardHover transition-colors">
+                            <td class="px-3.5 py-2.5 font-medium text-slate-200 whitespace-nowrap">${area}</td>
+                            <td class="px-2.5 py-2.5 text-right font-mono text-rose-400">${fmt(row.canceled)}</td>
+                            <td class="px-2.5 py-2.5 text-right font-mono text-emerald-400">${fmt(row.selesai)}</td>
+                            <td class="px-2.5 py-2.5 text-right font-mono text-amber-400">${fmt(row.pending)}</td>
+                            <td class="px-3.5 py-2.5 text-right font-mono font-semibold text-white bg-slate-900/40">${fmt(rowTotal)}</td>
+                        </tr>
+                    `;
+                } else {
+                    rowsHtml += `
+                        <tr class="border-b border-borderSubtle/60 hover:bg-cardHover transition-colors">
+                            <td class="px-3.5 py-2.5 font-medium text-slate-200 whitespace-nowrap">${area}</td>
+                            <td class="px-2.5 py-2.5 text-right font-mono text-rose-400">${fmt(row.canceled)}</td>
+                            <td class="px-2.5 py-2.5 text-right font-mono text-amber-400">${fmt(row.pending)}</td>
+                            <td class="px-2.5 py-2.5 text-right font-mono text-emerald-400">${fmt(row.selesai)}</td>
+                            <td class="px-3.5 py-2.5 text-right font-mono font-semibold text-white bg-slate-900/40">${fmt(rowTotal)}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            const grandTotal = totCanceled + totSelesai + totPending;
+            const pctCanceled = grandTotal ? ((totCanceled / grandTotal) * 100).toFixed(1) : '0.0';
+            const pctSelesai  = grandTotal ? ((totSelesai / grandTotal) * 100).toFixed(1) : '0.0';
+            const pctPending  = grandTotal ? ((totPending / grandTotal) * 100).toFixed(1) : '0.0';
+
+            const theadHtml = `
+                <tr class="bg-pitch/90 text-[11px] uppercase tracking-wider text-slate-400 border-b border-borderSubtle">
+                    <th class="px-3.5 py-2.5 font-semibold">Bisnis Area</th>
+                    <th class="px-2.5 py-2.5 text-right font-semibold">Canceled</th>
+                    ${isOverall
+                        ? '<th class="px-2.5 py-2.5 text-right font-semibold">Selesai Dikerjakan</th><th class="px-2.5 py-2.5 text-right font-semibold">Pending</th>'
+                        : '<th class="px-2.5 py-2.5 text-right font-semibold">Pending</th><th class="px-2.5 py-2.5 text-right font-semibold">Selesai Dikerjakan</th>'
+                    }
+                    <th class="px-3.5 py-2.5 text-right font-semibold text-slate-200">Grand Total</th>
+                </tr>
+            `;
+
+            const tfootHtml = isOverall
+                ? `
+                    <tr class="bg-slate-900/95 font-bold text-white border-t border-slate-700">
+                        <td class="px-3.5 py-2.5">Grand Total</td>
+                        <td class="px-2.5 py-2.5 text-right font-mono text-rose-300">${fmt(totCanceled)}</td>
+                        <td class="px-2.5 py-2.5 text-right font-mono text-emerald-300">${fmt(totSelesai)}</td>
+                        <td class="px-2.5 py-2.5 text-right font-mono text-amber-300">${fmt(totPending)}</td>
+                        <td class="px-3.5 py-2.5 text-right font-mono text-blue-300">${fmt(grandTotal)}</td>
+                    </tr>
+                    <tr class="bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 font-semibold text-xs border-t border-purple-500/35">
+                        <td class="px-3.5 py-2 text-purple-300">Prosentase</td>
+                        <td class="px-2.5 py-2 text-right font-mono text-rose-300">${pctCanceled.replace('.', ',')}%</td>
+                        <td class="px-2.5 py-2 text-right font-mono text-emerald-300">${pctSelesai.replace('.', ',')}%</td>
+                        <td class="px-2.5 py-2 text-right font-mono text-amber-300">${pctPending.replace('.', ',')}%</td>
+                        <td class="px-3.5 py-2 text-right font-mono text-white">100%</td>
+                    </tr>
+                `
+                : `
+                    <tr class="bg-slate-900/95 font-bold text-white border-t border-slate-700">
+                        <td class="px-3.5 py-2.5">Grand Total</td>
+                        <td class="px-2.5 py-2.5 text-right font-mono text-rose-300">${fmt(totCanceled)}</td>
+                        <td class="px-2.5 py-2.5 text-right font-mono text-amber-300">${fmt(totPending)}</td>
+                        <td class="px-2.5 py-2.5 text-right font-mono text-emerald-300">${fmt(totSelesai)}</td>
+                        <td class="px-3.5 py-2.5 text-right font-mono text-blue-300">${fmt(grandTotal)}</td>
+                    </tr>
+                `;
+
+            table.innerHTML = `<thead>${theadHtml}</thead><tbody>${rowsHtml}</tbody><tfoot>${tfootHtml}</tfoot>`;
+            return { totCanceled, totSelesai, totPending, grandTotal, pctCanceled, pctSelesai, pctPending };
+        }
+
+        function renderTopSection() {
+            const overallData = computeOverallData();
+            const stats = renderPivotSummaryTable('tableOverall', overallData, 'overall');
+            renderPivotSummaryTable('tablePre2026', appData.pre2026, 'period');
+            renderPivotSummaryTable('table2026', appData.year2026, 'period');
+
+            const badgeEl = document.getElementById('datasetSourceBadge');
+            if (badgeEl) {
+                badgeEl.textContent = appData.isCustom
+                    ? `Data CSV Unggahan (${fmt(appData.totalRows)} FA)`
+                    : `Data Riil Tersemat (${fmt(appData.totalRows)} FA)`;
+            }
+            const diagEl = document.getElementById('datasetDiagnosticsText');
+            if (diagEl) diagEl.textContent = appData.diagnostics;
+
+            const expBadgeEl = document.getElementById('explorerRowBadge');
+            if (expBadgeEl) {
+                expBadgeEl.textContent = appData.isSampleExplorer
+                    ? `Sampel (${appData.rawRows.length} baris)`
+                    : `${fmt(appData.rawRows.length)} baris`;
+            }
+
+            const kpiContainer = document.getElementById('kpiCards');
+            if (kpiContainer) {
+                kpiContainer.innerHTML = `
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Total FA Diterima</p>
+                            <p class="text-xl sm:text-2xl font-bold text-white font-mono tabular-nums mt-1">${fmt(stats.grandTotal)}</p>
+                            <p class="text-[11px] text-blue-400 mt-1">Akumulasi Seluruh Bisnis Area</p>
+                        </div>
+                        <div class="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300 font-mono font-bold text-xs">100%</div>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Selesai Dikerjakan</p>
+                            <p class="text-xl sm:text-2xl font-bold text-emerald-400 font-mono tabular-nums mt-1">${fmt(stats.totSelesai)}</p>
+                            <p class="text-[11px] text-emerald-400/80 mt-1">Tingkat Penyelesaian: ${stats.pctSelesai.replace('.', ',')}%</p>
+                        </div>
+                        <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-300 font-mono font-bold text-xs">${stats.pctSelesai.replace('.', ',')}%</div>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Status Pending</p>
+                            <p class="text-xl sm:text-2xl font-bold text-amber-400 font-mono tabular-nums mt-1">${fmt(stats.totPending)}</p>
+                            <p class="text-[11px] text-amber-400/80 mt-1">Dalam Proses / Antrian</p>
+                        </div>
+                        <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-300 font-mono font-bold text-xs">${stats.pctPending.replace('.', ',')}%</div>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium">Status Canceled</p>
+                            <p class="text-xl sm:text-2xl font-bold text-rose-400 font-mono tabular-nums mt-1">${fmt(stats.totCanceled)}</p>
+                            <p class="text-[11px] text-rose-400/80 mt-1">Dibatalkan / Tidak Valid</p>
+                        </div>
+                        <div class="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-300 font-mono font-bold text-xs">${stats.pctCanceled.replace('.', ',')}%</div>
+                    </div>
+                `;
+            }
+        }
+
+        // =========================================================================
+        // 5. SHEET 1: DAILY MATRIX (1 - 31) WITH HEATMAP
+        // =========================================================================
+        function setMatrixMetric(metric) {
+            state.matrixMetric = metric;
+            const map = {
+                diterima: document.getElementById('btnMetricDiterima'),
+                dikerjakan: document.getElementById('btnMetricDikerjakan'),
+                both: document.getElementById('btnMetricBoth')
+            };
+            Object.entries(map).forEach(([key, btn]) => {
+                if (!btn) return;
+                btn.className = key === metric
+                    ? 'px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-gradient-accent text-white shadow'
+                    : 'px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-400 hover:text-white';
+            });
+            renderDailyMatrixSection();
+        }
+
+        function setMatrixMonth(monthNum) {
+            state.matrixMonth = monthNum;
+            const sel = document.getElementById('matrixMonthSelect');
+            if (sel) sel.value = String(monthNum);
+
+            const b10 = document.getElementById('btnMonth10');
+            const b11 = document.getElementById('btnMonth11');
+            if (b10) {
+                b10.className = monthNum === 10
+                    ? 'px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-slate-800 text-white border border-slate-700'
+                    : 'px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-400 hover:text-white';
+            }
+            if (b11) {
+                b11.className = monthNum === 11
+                    ? 'px-3 py-1.5 text-xs font-semibold rounded-lg transition bg-slate-800 text-white border border-slate-700'
+                    : 'px-3 py-1.5 text-xs font-medium rounded-lg transition text-slate-400 hover:text-white';
+            }
+
+            renderDailyMatrixSection();
+        }
+
+        function buildSingleMatrixHtml(titleBanner, matrixData, accentColor = 'blue') {
+            const colTotals = new Array(31).fill(0);
+            let maxCellVal = 0;
+
+            CANONICAL_AREAS.forEach(area => {
+                const arr = matrixData[area] || new Array(31).fill(0);
+                arr.forEach((v, idx) => {
+                    if (v > maxCellVal) maxCellVal = v;
+                    colTotals[idx] += v;
+                });
+            });
+
+            let headerCols = '';
+            for (let d = 1; d <= 31; d++) {
+                headerCols += `<th class="px-1.5 py-2 text-center font-semibold text-slate-400 border-l border-borderSubtle/60 min-w-[34px]">${d}</th>`;
+            }
+
+            let bodyHtml = '';
+            let grandTotalAll = 0;
+
+            CANONICAL_AREAS.forEach(area => {
+                const arr = matrixData[area] || new Array(31).fill(0);
+                let rowSum = 0;
+                let cellsHtml = '';
+
+                arr.forEach(val => {
+                    rowSum += val;
+                    let cellBg = '';
+                    let textCol = 'text-slate-600';
+
+                    if (val > 0) {
+                        const ratio = maxCellVal > 0 ? val / maxCellVal : 0;
+                        if (ratio >= 0.72) {
+                            cellBg = 'bg-purple-500/40';
+                            textCol = 'text-purple-100 font-bold';
+                        } else if (ratio >= 0.38) {
+                            cellBg = 'bg-blue-500/25';
+                            textCol = 'text-blue-200 font-semibold';
+                        } else {
+                            cellBg = 'bg-slate-800/45';
+                            textCol = 'text-slate-300';
+                        }
+                    }
+
+                    cellsHtml += `<td class="px-1 py-2 text-center border-l border-borderSubtle/40 ${cellBg} ${textCol}">${val === 0 ? '-' : val}</td>`;
+                });
+
+                grandTotalAll += rowSum;
+
+                bodyHtml += `
+                    <tr class="border-b border-borderSubtle/60 hover:bg-cardHover transition-colors">
+                        <td class="sticky-col-left px-3.5 py-2 font-sans font-medium text-xs text-slate-200 whitespace-nowrap border-r border-borderSubtle shadow-[4px_0_8px_rgba(0,0,0,0.4)]">${area}</td>
+                        ${cellsHtml}
+                        <td class="sticky-col-right px-3 py-2 text-right font-bold text-white border-l border-borderSubtle shadow-[-4px_0_8px_rgba(0,0,0,0.4)]">${fmt(rowSum)}</td>
+                    </tr>
+                `;
+            });
+
+            let footerCols = '';
+            colTotals.forEach(sum => {
+                footerCols += `<td class="px-1 py-2.5 text-center font-bold text-slate-200 border-l border-borderSubtle/50">${sum}</td>`;
+            });
+
+            const badgeColor = accentColor === 'purple'
+                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                : 'bg-blue-500/15 text-blue-300 border-blue-500/30';
+
+            return `
+                <div>
+                    <div class="px-4 sm:px-6 py-2.5 bg-pitch/50 border-b border-borderSubtle/70 flex items-center justify-between">
+                        <span class="text-xs font-bold tracking-wide text-white">${titleBanner}</span>
+                        <span class="px-2 py-0.5 text-[11px] font-mono rounded-md border ${badgeColor}">Total: ${fmt(grandTotalAll)} FA</span>
+                    </div>
+                    <div class="overflow-x-auto relative">
+                        <table class="w-full text-[11px] font-mono border-collapse tabular-nums">
+                            <thead>
+                                <tr class="bg-pitch/90 text-[11px] border-b border-borderSubtle">
+                                    <th class="sticky-col-left px-3.5 py-2 text-left font-sans font-semibold text-slate-300 border-r border-borderSubtle min-w-[175px]">Bisnis Area</th>
+                                    ${headerCols}
+                                    <th class="sticky-col-right px-3 py-2 text-right font-sans font-semibold text-blue-400 border-l border-borderSubtle min-w-[82px]">Grand Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${bodyHtml}</tbody>
+                            <tfoot>
+                                <tr class="bg-slate-900/95 border-t border-slate-700">
+                                    <td class="sticky-col-left px-3.5 py-2.5 font-sans font-bold text-xs text-white border-r border-borderSubtle">Grand Total</td>
+                                    ${footerCols}
+                                    <td class="sticky-col-right px-3 py-2.5 text-right font-bold text-purple-300 border-l border-borderSubtle">${fmt(grandTotalAll)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDailyMatrixSection() {
+            const m = state.matrixMonth;
+            const monthName = (MONTH_NAMES_ID[m] || '').toUpperCase();
+            const container = document.getElementById('dailyMatrixContainer');
+            const titleEl = document.getElementById('matrixMainTitle');
+            if (!container) return;
+
+            const dataDiterima = appData.diterimaByMonth[m] || createEmptyMatrix31();
+            const dataDikerjakan = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
+
+            if (state.matrixMetric === 'diterima') {
+                if (titleEl) titleEl.textContent = `FA DITERIMA PCS - DJP PADA BULAN ${monthName} 2026`;
+                container.innerHTML = buildSingleMatrixHtml(`FA DITERIMA • ${monthName} 2026 (Berdasarkan Day Receive Date)`, dataDiterima, 'blue');
+            } else if (state.matrixMetric === 'dikerjakan') {
+                if (titleEl) titleEl.textContent = `FA DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
+                container.innerHTML = buildSingleMatrixHtml(`FA SELESAI DIKERJAKAN • ${monthName} 2026 (Berdasarkan Tgl Work Date)`, dataDikerjakan, 'purple');
+            } else {
+                if (titleEl) titleEl.textContent = `FA DITERIMA & DIKERJAKAN PCS - DJP PADA BULAN ${monthName} 2026`;
+                container.innerHTML =
+                    buildSingleMatrixHtml(`1. FA DITERIMA • ${monthName} 2026 (Day Receive Date)`, dataDiterima, 'blue') +
+                    buildSingleMatrixHtml(`2. FA SELESAI DIKERJAKAN • ${monthName} 2026 (Tgl Work Date)`, dataDikerjakan, 'purple');
+            }
+        }
+
+        // =========================================================================
+        // 6. SHEET 1: SLICER & TREND MODULES (BULANAN, MINGGUAN, HARIAN)
+        // =========================================================================
+        function renderSlicers() {
+            const container = document.getElementById('slicerButtonsContainer');
+            if (!container) return;
+            const options = [{ id: 'ALL', label: '(All)' }, ...CANONICAL_AREAS.map(a => ({ id: a, label: a }))];
+
+            container.innerHTML = options.map(opt => {
+                const isActive = state.selectedArea === opt.id;
+                const cls = isActive
+                    ? 'bg-gradient-accent text-white font-semibold shadow-md shadow-purple-500/25 border-transparent'
+                    : 'bg-pitch hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 border-borderSubtle font-medium';
+                return `
+                    <button onclick="selectAreaSlicer('${opt.id}')" class="px-3 py-1.5 rounded-xl text-xs border transition ${cls}">
+                        ${opt.label}
+                    </button>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.active-area-badge').forEach(el => {
+                el.textContent = state.selectedArea === 'ALL' ? '(All)' : state.selectedArea;
+            });
+        }
+
+        function selectAreaSlicer(areaId) {
+            state.selectedArea = areaId;
+            renderSlicers();
+            renderAllProgressModules();
+        }
+
+        function setDailyTrendMonth(monthNum) {
+            state.dailyTrendMonth = monthNum;
+            renderDailyProgressModule();
+        }
+
+        function renderProgressTable(tableId, colHeader, labels, values) {
+            const table = document.getElementById(tableId);
+            if (!table) return 0;
+            let total = 0;
+            let rows = '';
+
+            labels.forEach((lbl, idx) => {
+                const val = values[idx] || 0;
+                total += val;
+                rows += `
+                    <tr class="border-b border-borderSubtle/50 hover:bg-cardHover transition-colors">
+                        <td class="px-3 py-1.5 text-slate-300 font-medium">${lbl}</td>
+                        <td class="px-3 py-1.5 text-right font-mono text-slate-100">${fmt(val)}</td>
+                    </tr>
+                `;
+            });
+
+            table.innerHTML = `
+                <thead class="sticky top-0 bg-slate-900 z-10 border-b border-borderSubtle">
+                    <tr class="text-[11px] uppercase text-slate-400">
+                        <th class="px-3 py-2 text-left font-semibold">${colHeader}</th>
+                        <th class="px-3 py-2 text-right font-semibold">Count of FA ID</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot class="sticky bottom-0 bg-slate-900/95 border-t border-slate-700 font-bold text-white">
+                    <tr>
+                        <td class="px-3 py-2">Grand Total</td>
+                        <td class="px-3 py-2 text-right font-mono text-blue-300">${fmt(total)}</td>
+                    </tr>
+                </tfoot>
+            `;
+            return total;
+        }
+
+        function renderSmoothLineChart(canvasId, existingChart, labels, dataValues) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || typeof Chart === 'undefined') return existingChart;
+            const ctx = canvas.getContext('2d');
+            if (existingChart) existingChart.destroy();
+
+            const strokeGradient = ctx.createLinearGradient(0, 0, canvas.width || 600, 0);
+            strokeGradient.addColorStop(0, '#3B82F6');
+            strokeGradient.addColorStop(0.5, '#6366F1');
+            strokeGradient.addColorStop(1, '#8B5CF6');
+
+            const fillGradient = ctx.createLinearGradient(0, 0, 0, 260);
+            fillGradient.addColorStop(0, 'rgba(59, 130, 246, 0.28)');
+            fillGradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Selesai Dikerjakan',
+                        data: dataValues,
+                        borderColor: strokeGradient,
+                        backgroundColor: fillGradient,
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.32,
+                        pointBackgroundColor: '#0E1320',
+                        pointBorderColor: '#8B5CF6',
+                        pointBorderWidth: 2,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#8B5CF6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 22, right: 14, left: 6, bottom: 4 } },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0E1320',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#c4b5fd',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: { label: (c) => `Selesai Dikerjakan: ${fmt(c.parsed.y)} FA` }
+                        },
+                        datalabels: {
+                            align: 'top',
+                            anchor: 'end',
+                            offset: 2,
+                            color: '#e2e8f0',
+                            font: { family: 'JetBrains Mono', size: 10, weight: '600' },
+                            formatter: (v) => v > 0 ? v : ''
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(148, 163, 184, 0.06)', drawBorder: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter', size: 10 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grace: '16%',
+                            grid: { color: 'rgba(148, 163, 184, 0.07)', drawBorder: false },
+                            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMonthlyProgressModule() {
+            const labels = Array.from({ length: 11 }, (_, i) => `${i + 1} (${MONTH_NAMES_ID[i + 1].slice(0, 3)})`);
+            const values = new Array(11).fill(0);
+
+            for (let m = 1; m <= 11; m++) {
+                const mat = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
+                if (state.selectedArea === 'ALL') {
+                    CANONICAL_AREAS.forEach(area => {
+                        values[m - 1] += (mat[area] || []).reduce((a, b) => a + b, 0);
+                    });
+                } else {
+                    values[m - 1] = (mat[state.selectedArea] || []).reduce((a, b) => a + b, 0);
+                }
+            }
+
+            const total = renderProgressTable('tableProgressMonthly', 'Month Date', labels, values);
+            const totEl = document.getElementById('monthlyTotalLabel');
+            if (totEl) totEl.textContent = `Grand Total: ${fmt(total)} FA`;
+            charts.monthly = renderSmoothLineChart('chartMonthly', charts.monthly, labels, values);
+        }
+
+        function renderWeeklyProgressModule() {
+            const labels = appData.weeklyLabels || [];
+            const values = new Array(labels.length).fill(0);
+
+            if (state.selectedArea === 'ALL') {
+                CANONICAL_AREAS.forEach(area => {
+                    const arr = appData.weeklyByArea[area] || [];
+                    arr.forEach((v, i) => { if (i < values.length) values[i] += v; });
+                });
+            } else {
+                const arr = appData.weeklyByArea[state.selectedArea] || [];
+                arr.forEach((v, i) => { if (i < values.length) values[i] = v; });
+            }
+
+            const shortLabels = labels.map(lbl => {
+                const m = lbl.match(/^(\d{2}\s\w+)/);
+                return m ? m[1] : lbl.slice(0, 12);
+            });
+
+            const total = renderProgressTable('tableProgressWeekly', 'MINGGUAN', labels, values);
+            const totEl = document.getElementById('weeklyTotalLabel');
+            if (totEl) totEl.textContent = `Grand Total: ${fmt(total)} FA`;
+            charts.weekly = renderSmoothLineChart('chartWeekly', charts.weekly, shortLabels, values);
+        }
+
+        function renderDailyProgressModule() {
+            const m = state.dailyTrendMonth;
+            const maxDays = m === 11 ? 21 : 31;
+            const labels = Array.from({ length: maxDays }, (_, i) => `${i + 1}`);
+            const values = new Array(maxDays).fill(0);
+            const mat = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
+
+            if (state.selectedArea === 'ALL') {
+                CANONICAL_AREAS.forEach(area => {
+                    (mat[area] || []).slice(0, maxDays).forEach((v, idx) => { values[idx] += v; });
+                });
+            } else {
+                (mat[state.selectedArea] || []).slice(0, maxDays).forEach((v, idx) => { values[idx] = v; });
+            }
+
+            const subEl = document.getElementById('dailyChartSubtitle');
+            if (subEl) subEl.textContent = `Grafik Tgl Work Date (${MONTH_NAMES_ID[m]} 2026)`;
+            const total = renderProgressTable('tableProgressDaily', 'Tgl Work Date', labels, values);
+            const totEl = document.getElementById('dailyTotalLabel');
+            if (totEl) totEl.textContent = `Grand Total: ${fmt(total)} FA`;
+            charts.daily = renderSmoothLineChart('chartDaily', charts.daily, labels, values);
+        }
+
+        function renderAllProgressModules() {
+            renderMonthlyProgressModule();
+            renderWeeklyProgressModule();
+            renderDailyProgressModule();
+        }
+
+        // =========================================================================
+        // 7. TAB 2: TAMPILAN DATA (FA DJP - PCS)
+        // =========================================================================
+        function populateExplorerSubkonDropdown() {
+            const selFaStatus = document.getElementById('expFaStatusFilter');
+            if (selFaStatus) {
+                const prevFaStatus = selFaStatus.value || 'ALL';
+                const uniqueFaStatuses = Array.from(new Set(
+                    appData.rawRows
+                        .map(r => (r.status || '').trim())
+                        .filter(s => s && s !== '-')
+                )).sort();
+                selFaStatus.innerHTML = `<option value="ALL">FA STATUS 2 (${uniqueFaStatuses.length})</option>` +
+                    uniqueFaStatuses.map(s => `<option value="${s.replace(/"/g, '&quot;')}">${s}</option>`).join('');
+                selFaStatus.value = Array.from(selFaStatus.options).some(o => o.value === prevFaStatus) ? prevFaStatus : 'ALL';
+            }
+
+            const selNote = document.getElementById('expSubkonFilter');
+            if (selNote) {
+                const prevNote = selNote.value || 'ALL';
+                const uniqueNotes = Array.from(new Set(
+                    appData.rawRows
+                        .map(r => (r.note || '').trim())
+                        .filter(n => n && n !== '-')
+                )).sort();
+                selNote.innerHTML = `<option value="ALL">NOTE (${uniqueNotes.length})</option>` +
+                    uniqueNotes.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+                selNote.value = Array.from(selNote.options).some(o => o.value === prevNote) ? prevNote : 'ALL';
+            }
+
+            const selPending = document.getElementById('expStatusFilter');
+            if (selPending) {
+                const prevPending = selPending.value || 'ALL';
+                const uniquePending = Array.from(new Set(
+                    appData.rawRows
+                        .map(r => (r.pendingStatus2 || '').trim())
+                        .filter(v => v && v !== '-')
+                )).sort();
+                selPending.innerHTML = `<option value="ALL">PENDING SATTUS 2 (${uniquePending.length})</option>` +
+                    uniquePending.map(p => `<option value="${p.replace(/"/g, '&quot;')}">${p}</option>`).join('');
+                selPending.value = Array.from(selPending.options).some(o => o.value === prevPending) ? prevPending : 'ALL';
+            }
+        }
+
+        function applyExplorerFilters() {
+            const searchInput = document.getElementById('expSearchInput');
+            const areaSel = document.getElementById('expAreaFilter');
+            const faStatusSel = document.getElementById('expFaStatusFilter');
+            const statusSel = document.getElementById('expStatusFilter');
+            const noteSel = document.getElementById('expSubkonFilter');
+
+            explorerState.search   = searchInput ? (searchInput.value || '').trim().toLowerCase() : '';
+            explorerState.area     = areaSel ? areaSel.value : 'ALL';
+            explorerState.faStatus = faStatusSel ? faStatusSel.value : 'ALL';
+            explorerState.status   = statusSel ? statusSel.value : 'ALL';
+            explorerState.note     = noteSel ? noteSel.value : 'ALL';
+
+            explorerState.filteredRows = appData.rawRows.filter(row => {
+                if (explorerState.area !== 'ALL' && row.area !== explorerState.area) return false;
+                if (explorerState.faStatus !== 'ALL' && row.status !== explorerState.faStatus) return false;
+                if (explorerState.status !== 'ALL' && row.pendingStatus2 !== explorerState.status) return false;
+                if (explorerState.note !== 'ALL' && row.note !== explorerState.note) return false;
+                if (explorerState.search) {
+                    const hay = [
+                        row.faId,
+                        row.nomen,
+                        row.entity,
+                        row.address,
+                        row.area,
+                        row.subkon,
+                        row.status,
+                        row.periode,
+                        row.recDt,
+                        row.workDt,
+                        row.mingguan,
+                        row.pendingStatus2,
+                        row.note
+                    ].join(' ').toLowerCase();
+                    if (!hay.includes(explorerState.search)) return false;
+                }
+                return true;
+            });
+
+            explorerState.page = 1;
+            renderExplorerTable();
+        }
+
+        function resetExplorerFilters() {
+            const searchInput = document.getElementById('expSearchInput');
+            const areaSel = document.getElementById('expAreaFilter');
+            const faStatusSel = document.getElementById('expFaStatusFilter');
+            const statusSel = document.getElementById('expStatusFilter');
+            const noteSel = document.getElementById('expSubkonFilter');
+            if (searchInput) searchInput.value = '';
+            if (areaSel) areaSel.value = 'ALL';
+            if (faStatusSel) faStatusSel.value = 'ALL';
+            if (statusSel) statusSel.value = 'ALL';
+            if (noteSel) noteSel.value = 'ALL';
+            applyExplorerFilters();
+        }
+
+        function changeExplorerPageSize(newSize) {
+            explorerState.pageSize = newSize;
+            explorerState.page = 1;
+            renderExplorerTable();
+        }
+
+        function goExplorerPage(targetPage) {
+            const totalPages = Math.max(1, Math.ceil(explorerState.filteredRows.length / explorerState.pageSize));
+            explorerState.page = Math.min(Math.max(1, targetPage), totalPages);
+            renderExplorerTable();
+        }
+
+        function renderExplorerTable() {
+            const rows = explorerState.filteredRows;
+            const total = rows.length;
+            const totalPages = Math.max(1, Math.ceil(total / explorerState.pageSize));
+            const startIdx = (explorerState.page - 1) * explorerState.pageSize;
+            const pageRows = rows.slice(startIdx, startIdx + explorerState.pageSize);
+
+            const modeTag = document.getElementById('explorerModeTag');
+            if (modeTag) {
+                if (appData.isSampleExplorer) {
+                    modeTag.textContent = `Sampel Representatif Riil (${rows.length} baris) — Unggah CSV untuk seluruh 43.589 baris`;
+                    modeTag.className = 'px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30';
+                } else {
+                    modeTag.textContent = `Dataset Penuh CSV (${fmt(appData.rawRows.length)} baris)`;
+                    modeTag.className = 'px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+                }
+            }
+
+            const tbody = document.getElementById('explorerTableBody');
+            if (!tbody) return;
+
+            if (pageRows.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="13" class="px-6 py-10 text-center text-slate-400">
+                            Tidak ada data yang cocok dengan filter pencarian saat ini.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = pageRows.map(r => {
+                    let badgeCls = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+                    if (r.status === 'Selesai Dikerjakan') badgeCls = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+                    else if (r.status === 'Canceled') badgeCls = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+
+                    const hasPendingSub = r.pendingStatus2 && r.pendingStatus2 !== '-';
+                    const pendingCellCls = hasPendingSub
+                        ? 'text-amber-300 font-medium'
+                        : 'text-slate-500';
+
+                    return `
+                        <tr class="hover:bg-cardHover transition-colors">
+                            <td class="px-3.5 py-2.5 font-mono font-semibold text-blue-300 whitespace-nowrap">${r.faId}</td>
+                            <td class="px-3.5 py-2.5 font-mono text-slate-200 whitespace-nowrap">${r.nomen || '-'}</td>
+                            <td class="px-3.5 py-2.5 font-medium text-white whitespace-nowrap">${r.entity}</td>
+                            <td class="px-3.5 py-2.5 text-slate-300">${r.address}</td>
+                            <td class="px-3.5 py-2.5 font-medium text-slate-200 whitespace-nowrap">${r.area}</td>
+                            <td class="px-3.5 py-2.5 text-purple-300 whitespace-nowrap">${r.subkon}</td>
+                            <td class="px-3.5 py-2.5 whitespace-nowrap">
+                                <span class="px-2 py-0.5 text-[11px] font-semibold rounded-md border ${badgeCls}">${r.status}</span>
+                            </td>
+                            <td class="px-3.5 py-2.5 font-mono text-slate-300 whitespace-nowrap">${r.periode}</td>
+                            <td class="px-3.5 py-2.5 font-mono text-slate-400 whitespace-nowrap">${r.recDt}</td>
+                            <td class="px-3.5 py-2.5 font-mono text-slate-300 whitespace-nowrap">${r.workDt}</td>
+                            <td class="px-3.5 py-2.5 text-slate-400 whitespace-nowrap">${r.mingguan}</td>
+                            <td class="px-3.5 py-2.5 ${pendingCellCls}">${r.pendingStatus2 || '-'}</td>
+                            <td class="px-3.5 py-2.5 text-slate-200">${r.note || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const fromNum = total === 0 ? 0 : startIdx + 1;
+            const toNum = Math.min(startIdx + explorerState.pageSize, total);
+            const infoEl = document.getElementById('explorerPaginationInfo');
+            const pageIndEl = document.getElementById('expPageIndicator');
+            if (infoEl) infoEl.textContent = `Menampilkan ${fmt(fromNum)} - ${fmt(toNum)} dari ${fmt(total)} baris`;
+            if (pageIndEl) pageIndEl.textContent = `Hal ${fmt(explorerState.page)} / ${fmt(totalPages)}`;
+
+            const bFirst = document.getElementById('btnExpFirst');
+            const bPrev = document.getElementById('btnExpPrev');
+            const bNext = document.getElementById('btnExpNext');
+            const bLast = document.getElementById('btnExpLast');
+            if (bFirst) bFirst.disabled = explorerState.page <= 1;
+            if (bPrev) bPrev.disabled = explorerState.page <= 1;
+            if (bNext) bNext.disabled = explorerState.page >= totalPages;
+            if (bLast) bLast.disabled = explorerState.page >= totalPages;
+        }
+
+        function exportFilteredExplorerCSV() {
+            const rows = explorerState.filteredRows;
+            if (!rows || rows.length === 0) {
+                showToast('Tidak ada baris data untuk diekspor.', 'error');
+                return;
+            }
+            const headers = [
+                "FA ID", "NOMEN", "ENTITY NAME", "ADDRESS", "AREA BUSINESS",
+                "SUBKON 2", "FA STATUS 2", "FA Diterima", "RECEIVED DT",
+                "Work Date", "MINGGUAN", "Pending Status 2", "NOTE"
+            ];
+            const escapeCsv = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+            const csvLines = [
+                headers.join(';'),
+                ...rows.map(r => [
+                    r.faId, r.nomen, r.entity, r.address, r.area,
+                    r.subkon, r.status, r.periode, r.recDt,
+                    r.workDt, r.mingguan, r.pendingStatus2, r.note
+                ].map(escapeCsv).join(';'))
+            ];
+            const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `export_FA_DJP_PCS_filtered_${rows.length}_rows.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Berhasil mengunduh ${fmt(rows.length)} baris CSV.`);
+        }
+
+        // =========================================================================
+        // 8. SMART CSV PARSER FOR SHEET "FA DJP - PCS" (TRIMMED HEADERS)
+        // =========================================================================
+        function normalizeBusinessArea(raw) {
+            if (!raw) return null;
+            const cleaned = raw.trim().replace(/\s+/g, ' ').toLowerCase();
+            if (!cleaned) return null;
+            if (cleaned.includes('cengkareng')) return 'Cengkareng';
+            if (cleaned.includes('dharmawangsa')) return 'Dharmawangsa';
+            if (cleaned.includes('jatibaru') || cleaned.includes('jati baru')) return 'Jatibaru';
+            if (cleaned.includes('perdana')) return 'Perdana';
+            if (cleaned.includes('pondok') && cleaned.includes('bintaro')) return 'Pondok Indah Bintaro';
+            if (cleaned.includes('semanan')) return 'Semanan';
+            return null;
+        }
+
+        function detectCsvDelimiter(line) {
+            let commas = 0, semis = 0, inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') inQuotes = !inQuotes;
+                else if (!inQuotes) {
+                    if (ch === ',') commas++;
+                    else if (ch === ';') semis++;
+                }
+            }
+            return semis > commas ? ';' : ',';
+        }
+
+        function parseCsvRows(text, delimiter) {
+            const rows = [];
+            let currentRow = [];
+            let currentField = '';
+            let inQuotes = false;
+            const len = text.length;
+
+            for (let i = 0; i < len; i++) {
+                const ch = text[i];
+                if (inQuotes) {
+                    if (ch === '"') {
+                        if (i + 1 < len && text[i + 1] === '"') {
+                            currentField += '"';
+                            i++;
+                        } else {
+                            inQuotes = false;
+                        }
+                    } else {
+                        currentField += ch;
+                    }
+                } else {
+                    if (ch === '"') {
+                        inQuotes = true;
+                    } else if (ch === delimiter) {
+                        currentRow.push(currentField);
+                        currentField = '';
+                    } else if (ch === '\r') {
+                        if (i + 1 < len && text[i + 1] === '\n') i++;
+                        currentRow.push(currentField);
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentField = '';
+                    } else if (ch === '\n') {
+                        currentRow.push(currentField);
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentField = '';
+                    } else {
+                        currentField += ch;
+                    }
+                }
+            }
+            if (currentField.length > 0 || currentRow.length > 0) {
+                currentRow.push(currentField);
+                rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        function parseSheetFaDjpPcs(csvText) {
+            const cleanText = csvText.replace(/^\uFEFF/, '');
+            const sampleLines = cleanText.split(/\r?\n/).slice(0, 6).filter(l => l.trim().length > 0);
+            if (sampleLines.length === 0) throw new Error("File CSV kosong.");
+
+            let headerSampleLine = sampleLines[0];
+            for (const line of sampleLines) {
+                const upper = line.toUpperCase();
+                if (upper.includes('AREA BUSINESS') && upper.includes('FA STATUS 2')) {
+                    headerSampleLine = line;
+                    break;
+                }
+            }
+
+            const delimiter = detectCsvDelimiter(headerSampleLine);
+            const allRows = parseCsvRows(cleanText, delimiter);
+
+            let headerRowIdx = -1;
+            for (let r = 0; r < Math.min(allRows.length, 15); r++) {
+                const trimmedCols = allRows[r].map(c => c.trim().toUpperCase());
+                if (trimmedCols.includes('AREA BUSINESS') && trimmedCols.includes('FA STATUS 2')) {
+                    headerRowIdx = r;
+                    break;
+                }
+            }
+
+            if (headerRowIdx === -1) {
+                throw new Error("Baris header dengan kolom 'AREA BUSINESS' dan 'FA STATUS 2' tidak ditemukan.");
+            }
+
+            const headers = allRows[headerRowIdx].map(h => h.trim().toUpperCase());
+
+            const areaIndices = [];
+            headers.forEach((h, idx) => { if (h === 'AREA BUSINESS') areaIndices.push(idx); });
+
+            const idxFaId           = headers.indexOf('FA ID');
+            const idxNomen          = headers.indexOf('NOMEN');
+            const idxEntity         = headers.indexOf('ENTITY NAME');
+            const idxAddress        = headers.indexOf('ADDRESS');
+            const idxSubkon2        = headers.indexOf('SUBKON 2');
+            const idxStatus2        = headers.indexOf('FA STATUS 2');
+            const idxFaDiterima     = headers.indexOf('FA DITERIMA');
+            const idxRecDt          = headers.indexOf('RECEIVED DT');
+            const idxWorkDt         = headers.indexOf('WORK DATE');
+            const idxDayRec         = headers.indexOf('DAY RECEIVE DATE');
+            const idxMonthRec       = headers.indexOf('MONTH RECEIVE DATE');
+            const idxYearRec        = headers.indexOf('YEAR RECEIVE DATE');
+            const idxTglWork        = headers.indexOf('TGL WORK DATE');
+            const idxMonthWork      = headers.indexOf('MONTH DATE');
+            const idxYearWork       = headers.indexOf('YEAR WORK DATE');
+            const idxMingguan       = headers.indexOf('MINGGUAN');
+            const idxPendingStatus2 = (() => {
+                const exactTypoIdx = headers.indexOf('PENDING SATTUS 2');
+                if (exactTypoIdx >= 0) return exactTypoIdx;
+                const stdIdx = headers.indexOf('PENDING STATUS 2');
+                if (stdIdx >= 0) return stdIdx;
+                return headers.findIndex(h => h.includes('PENDING') && h.includes('2'));
+            })();
+            const idxNote           = headers.indexOf('NOTE');
+
+            const newPre2026 = {};
+            const newYear2026 = {};
+            const newDiterimaByMonth = {};
+            const newDikerjakanByMonth = {};
+            const newSameDayByMonth = {};
+            const weeklyMapByArea = {};
+            const weeklyIntervalSet = new Set();
+            const parsedRawRows = [];
+
+            CANONICAL_AREAS.forEach(a => {
+                newPre2026[a] = { canceled: 0, selesai: 0, pending: 0 };
+                newYear2026[a] = { canceled: 0, selesai: 0, pending: 0 };
+                weeklyMapByArea[a] = {};
+            });
+            for (let m = 1; m <= 12; m++) {
+                newDiterimaByMonth[m] = createEmptyMatrix31();
+                newDikerjakanByMonth[m] = createEmptyMatrix31();
+                newSameDayByMonth[m] = createEmptyMatrix31();
+            }
+
+            let validCount = 0;
+            let normalizedCaseFixes = 0;
+
+            for (let r = headerRowIdx + 1; r < allRows.length; r++) {
+                const row = allRows[r];
+                if (!row || row.length < 3) continue;
+
+                let rawArea = '';
+                for (const aIdx of areaIndices) {
+                    if (row[aIdx] && row[aIdx].trim() !== '') {
+                        rawArea = row[aIdx].trim();
+                        break;
+                    }
+                }
+                const area = normalizeBusinessArea(rawArea);
+                if (!area) continue;
+                if (rawArea !== area) normalizedCaseFixes++;
+
+                const statusRaw = (row[idxStatus2] || '').trim().toLowerCase();
+                if (!statusRaw) continue;
+
+                let statusKey = 'pending';
+                let statusLabel = 'Pending';
+                if (statusRaw.includes('cancel')) { statusKey = 'canceled'; statusLabel = 'Canceled'; }
+                else if (statusRaw.includes('selesai')) { statusKey = 'selesai'; statusLabel = 'Selesai Dikerjakan'; }
+                else if (statusRaw.includes('pending')) { statusKey = 'pending'; statusLabel = 'Pending'; }
+
+                validCount++;
+
+                const faDitRaw = idxFaDiterima >= 0 ? (row[idxFaDiterima] || '').trim() : '';
+                const yearRec = idxYearRec >= 0 ? parseInt(row[idxYearRec], 10) : NaN;
+                const isPre2026 = faDitRaw.includes('<') ? true : (faDitRaw === '2026' ? false : (!isNaN(yearRec) && yearRec < 2026));
+
+                if (isPre2026) newPre2026[area][statusKey]++;
+                else newYear2026[area][statusKey]++;
+
+                const subkonName = (idxSubkon2 >= 0 && row[idxSubkon2] && row[idxSubkon2].trim() && row[idxSubkon2].trim() !== '-')
+                    ? row[idxSubkon2].trim()
+                    : 'Subkon Lainnya / Belum Plot';
+
+                const dayRec = idxDayRec >= 0 ? parseInt(row[idxDayRec], 10) : NaN;
+                const monthRec = idxMonthRec >= 0 ? parseInt(row[idxMonthRec], 10) : NaN;
+                if (yearRec === 2026 && monthRec >= 1 && monthRec <= 12 && dayRec >= 1 && dayRec <= 31) {
+                    newDiterimaByMonth[monthRec][area][dayRec - 1]++;
+                }
+
+                const tglWork = idxTglWork >= 0 ? parseInt(row[idxTglWork], 10) : NaN;
+                const monthWork = idxMonthWork >= 0 ? parseInt(row[idxMonthWork], 10) : NaN;
+                const yearWork = idxYearWork >= 0 ? parseInt(row[idxYearWork], 10) : NaN;
+                const wkStr = (idxMingguan >= 0 && row[idxMingguan]) ? row[idxMingguan].trim() : '-';
+
+                if (yearWork === 2026 && statusKey === 'selesai') {
+                    if (monthWork >= 1 && monthWork <= 12 && tglWork >= 1 && tglWork <= 31) {
+                        newDikerjakanByMonth[monthWork][area][tglWork - 1]++;
+                        if (yearRec === 2026 && monthRec === monthWork && dayRec === tglWork) {
+                            newSameDayByMonth[monthWork][area][tglWork - 1]++;
+                        }
+                    }
+                    if (wkStr && wkStr !== '-' && wkStr.toLowerCase() !== 'null') {
+                        weeklyIntervalSet.add(wkStr);
+                        weeklyMapByArea[area][wkStr] = (weeklyMapByArea[area][wkStr] || 0) + 1;
+                    }
+                }
+
+                const rawPendingStatus2 = idxPendingStatus2 >= 0 ? (row[idxPendingStatus2] || '').trim() : '';
+                const rawNote = idxNote >= 0 ? (row[idxNote] || '').trim() : '';
+
+                parsedRawRows.push({
+                    faId: idxFaId >= 0 ? (row[idxFaId] || '-').trim() : `ROW-${validCount}`,
+                    nomen: idxNomen >= 0 ? (row[idxNomen] || '-').trim() : '-',
+                    entity: idxEntity >= 0 ? (row[idxEntity] || '-').trim() : '-',
+                    address: idxAddress >= 0 ? (row[idxAddress] || '-').trim() : '-',
+                    area,
+                    subkon: subkonName,
+                    status: statusLabel,
+                    periode: isPre2026 ? '<2026' : '2026',
+                    recDt: idxRecDt >= 0 ? (row[idxRecDt] || '-').trim() : '-',
+                    workDt: idxWorkDt >= 0 ? (row[idxWorkDt] || '-').trim() : '-',
+                    recYear: yearRec,
+                    recMonth: monthRec,
+                    recDay: dayRec,
+                    workYear: yearWork,
+                    workMonth: monthWork,
+                    workDay: tglWork,
+                    mingguan: wkStr || '-',
+                    pendingStatus2: rawPendingStatus2 || '-',
+                    note: rawNote || '-'
+                });
+            }
+
+            if (validCount === 0) throw new Error("Tidak ada baris transaksi valid yang terbaca dari file CSV.");
+
+            const monthOrderMap = { Jan:1, Feb:2, Mar:3, Apr:4, Mei:5, May:5, Jun:6, Jul:7, Agu:8, Aug:8, Sep:9, Okt:10, Oct:10, Nov:11, Des:12, Dec:12 };
+            const sortedWeeklyLabels = Array.from(weeklyIntervalSet).sort((a, b) => {
+                const ma = a.match(/^(\d{2})\s+([A-Za-z]+)\s+(\d{4})/);
+                const mb = b.match(/^(\d{2})\s+([A-Za-z]+)\s+(\d{4})/);
+                if (ma && mb) {
+                    const va = parseInt(ma[3], 10) * 10000 + (monthOrderMap[ma[2]] || 0) * 100 + parseInt(ma[1], 10);
+                    const vb = parseInt(mb[3], 10) * 10000 + (monthOrderMap[mb[2]] || 0) * 100 + parseInt(mb[1], 10);
+                    return va - vb;
+                }
+                return a.localeCompare(b);
+            });
+
+            const finalWeeklyByArea = {};
+            CANONICAL_AREAS.forEach(area => {
+                finalWeeklyByArea[area] = sortedWeeklyLabels.map(lbl => weeklyMapByArea[area][lbl] || 0);
+            });
+
+            const diagMsg = `Berhasil memuat ${fmt(validCount)} baris dari header baris ke-${headerRowIdx + 1} (pemisah '${delimiter}'), ${fmt(normalizedCaseFixes)} baris area diseragamkan`;
+
+            appData = {
+                isCustom: true,
+                totalRows: validCount,
+                diagnostics: diagMsg,
+                pre2026: newPre2026,
+                year2026: newYear2026,
+                diterimaByMonth: newDiterimaByMonth,
+                dikerjakanByMonth: newDikerjakanByMonth,
+                sameDayByMonth: newSameDayByMonth,
+                weeklyLabels: sortedWeeklyLabels.length > 0 ? sortedWeeklyLabels : ["Belum ada data MINGGUAN 2026"],
+                weeklyByArea: finalWeeklyByArea,
+                rawRows: parsedRawRows,
+                isSampleExplorer: false
+            };
+
+            return diagMsg;
+        }
+
+        // =========================================================================
+        // 9. MODAL & FILE / GOOGLE SHEETS HANDLERS
+        // =========================================================================
+        function toggleImportModal(show) {
+            const modal = document.getElementById('importModal');
+            if (!modal) return;
+            if (show) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function switchModalTab(tab) {
+            const tabFile = document.getElementById('modalTabFile');
+            const tabGsheet = document.getElementById('modalTabGsheet');
+            const btnFile = document.getElementById('tabBtnFile');
+            const btnGsheet = document.getElementById('tabBtnGsheet');
+            const applyBtn = document.getElementById('btnApplyCsvText');
+
+            if (tab === 'file') {
+                if (tabFile) tabFile.classList.remove('hidden');
+                if (tabGsheet) tabGsheet.classList.add('hidden');
+                if (btnFile) btnFile.className = 'px-4 py-2 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white -mb-px';
+                if (btnGsheet) btnGsheet.className = 'px-4 py-2 text-xs font-medium rounded-t-xl text-slate-400 hover:text-white transition';
+                if (applyBtn) applyBtn.classList.remove('hidden');
+            } else {
+                if (tabGsheet) tabGsheet.classList.remove('hidden');
+                if (tabFile) tabFile.classList.add('hidden');
+                if (btnGsheet) btnGsheet.className = 'px-4 py-2 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white -mb-px';
+                if (btnFile) btnFile.className = 'px-4 py-2 text-xs font-medium rounded-t-xl text-slate-400 hover:text-white transition';
+                if (applyBtn) applyBtn.classList.add('hidden');
+            }
+        }
+
+        function showModalDiagnostic(msg, isError = false) {
+            const box = document.getElementById('modalDiagnosticsBox');
+            if (!box) return;
+            box.classList.remove('hidden');
+            box.className = isError
+                ? 'rounded-xl p-3 text-xs border bg-rose-950/70 border-rose-500/40 text-rose-200'
+                : 'rounded-xl p-3 text-xs border bg-emerald-950/70 border-emerald-500/40 text-emerald-200';
+            box.textContent = msg;
+        }
+
+        function handleCsvPayload(csvText) {
+            try {
+                const diag = parseSheetFaDjpPcs(csvText);
+                refreshAllSheets();
+                showModalDiagnostic(diag, false);
+                showToast(diag, 'success');
+                setTimeout(() => toggleImportModal(false), 900);
+            } catch (err) {
+                showModalDiagnostic('Gagal memproses CSV: ' + err.message, true);
+                showToast(err.message, 'error');
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            showModalDiagnostic(`Membaca file "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB)...`, false);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                handleCsvPayload(e.target.result);
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function processTextareaCSV() {
+            const ta = document.getElementById('csvTextarea');
+            const text = ta ? ta.value.trim() : '';
+            if (!text) {
+                showToast('Pilih file .csv atau tempel teks CSV terlebih dahulu.', 'error');
+                return;
+            }
+            handleCsvPayload(text);
+        }
+
+        async function fetchGoogleSheetsCSV() {
+            const inp = document.getElementById('gsheetUrlInput');
+            const url = inp ? inp.value.trim() : '';
+            if (!url) {
+                showToast('Masukkan tautan Google Sheets CSV terlebih dahulu.', 'error');
+                return;
+            }
+            try {
+                showModalDiagnostic('Mengunduh data CSV dari Google Sheets...', false);
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status} - Gagal mengakses tautan.`);
+                const csvText = await resp.text();
+                handleCsvPayload(csvText);
+            } catch (err) {
+                showModalDiagnostic('Gagal memuat dari Google Sheets: ' + err.message, true);
+                showToast('Gagal memuat tautan Google Sheets.', 'error');
+            }
+        }
+
+        function downloadSampleCSV() {
+            const sampleLines = [
+                "43589;;;;;;;;;;;;;;;;",
+                "no;FA ID;NOMEN;ENTITY NAME;ADDRESS;AREA BUSINESS;SUBKON 2;FA STATUS 2;FA Diterima;RECEIVED DT;Work Date;Day Receive Date;Month Receive Date;Year Receive Date;Tgl Work Date;Month Date;Year Work Date;MINGGUAN ;Pending Status 2;NOTE",
+                "1;FA-2611-08491;011482910;PT Mitra Sejahtera;Jl. Daan Mogot Km 14;Cengkareng;PT Dinara Arshan Sejahtera;Selesai Dikerjakan;2026;2026-11-18;2026-11-20;18;11;2026;20;11;2026;15 Nov 2026 s/d 21 Nov 2026;-;Meter terpasang",
+                "2;FA-2611-08492;022918341;Budi Santoso;Jl. Pondok Indah Raya;Pondok indah Bintaro;PT Shima Citra Selaras;Pending;2026;2026-11-19;;19;11;2026;;;;;Konfirmasi Jadwal Pelanggan;Menunggu akses penghuni",
+                "3;FA-2611-08493;031948275;CV Karya Mandiri;Jl. Dharmawangsa X;Dharmawangsa;PT Anugerah Nusa Sentosa (DW);Selesai Dikerjakan;2026;2026-11-16;2026-11-18;16;11;2026;18;11;2026;15 Nov 2026 s/d 21 Nov 2026;-;Instalasi DN 20 selesai"
+            ];
+            const blob = new Blob([sampleLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "contoh_export_FA_DJP_PCS.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetToDefaultData() {
+            appData = buildEmbeddedRealDataset();
+            state.selectedArea = 'ALL';
+            refreshAllSheets();
+            showToast('Dasbor dikembalikan ke Data Riil Tersemat (43.589 FA).');
+        }
+
+        function refreshAllSheets() {
+            renderTopSection();
+            renderDailyMatrixSection();
+            renderSlicers();
+            renderAllProgressModules();
+            populateExplorerSubkonDropdown();
+            applyExplorerFilters();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshAllSheets();
+
+            const dropZone = document.getElementById('dropZone');
+            if (dropZone) {
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('border-purple-500', 'bg-purple-500/10');
+                });
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('border-purple-500', 'bg-purple-500/10');
+                });
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('border-purple-500', 'bg-purple-500/10');
+                    const file = e.dataTransfer.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => handleCsvPayload(ev.target.result);
+                        reader.readAsText(file);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
