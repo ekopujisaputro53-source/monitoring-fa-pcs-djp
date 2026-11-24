@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FA Monitoring PCS - DJP</title>
+    <title>Monitoring FA Diterima & Dikerjakan PCS - DJP</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js & DataLabels Plugin -->
@@ -530,16 +530,11 @@
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
         ];
 
-        const DEFAULT_GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOXtpPGPHcFfLfpRF1YmMlFPWQu5n721T58-cCFe3Sw_sbR9ypep_PMgXb6afIG_s3q0qo6i4m6s_Y/pub?gid=1874410890&single=true&output=csv";
-        const STORAGE_KEY_GSHEET_URL = "fa_pcs_djp_gsheet_csv_url_v1";
+        const DEFAULT_GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa503Ts4hdKyEK9btQlddhasFBWPEcMETuajPNbFMG8bb03bZzNJ3j2ToHi0DajNC2L7JEjOxMtR9D/pub?gid=2120234890&single=true&output=csv";
+        const STORAGE_KEY_GSHEET_URL = "fa_pcs_djp_gsheet_csv_url_v2";
 
         function getSavedGsheetUrl() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY_GSHEET_URL);
-                return (saved && saved.trim()) ? saved.trim() : DEFAULT_GSHEET_CSV_URL;
-            } catch (_) {
-                return DEFAULT_GSHEET_CSV_URL;
-            }
+            return DEFAULT_GSHEET_CSV_URL;
         }
 
         function saveGsheetUrl(url) {
@@ -2167,18 +2162,42 @@
             const iconSync = document.getElementById('iconSyncGsheet');
             if (iconSync) iconSync.classList.add('animate-spin');
 
+            const cacheBuster = url.includes('?') ? `&_ts=${Date.now()}` : `?_ts=${Date.now()}`;
+            const targetUrl = url + cacheBuster;
+
+            // Jalur pengambilan: langsung -> fallback CORS proxy (mengatasi blokir file:/// & redirect Google)
+            const fetchCandidates = [
+                { label: 'Langsung', endpoint: targetUrl },
+                { label: 'CORS Proxy 1', endpoint: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
+                { label: 'CORS Proxy 2', endpoint: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` }
+            ];
+
+            let lastError = null;
             try {
                 showModalDiagnostic('Mengunduh data CSV langsung dari Google Sheets...', false);
-                const cacheBuster = url.includes('?') ? `&_ts=${Date.now()}` : `?_ts=${Date.now()}`;
-                const resp = await fetch(url + cacheBuster, { cache: 'no-store' });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status} - Gagal mengakses tautan Google Sheets.`);
-                const csvText = await resp.text();
-                return handleCsvPayload(csvText, 'Google Sheets Live', autoCloseModal);
+
+                for (const candidate of fetchCandidates) {
+                    try {
+                        const resp = await fetch(candidate.endpoint, { cache: 'no-store' });
+                        if (!resp.ok) {
+                            throw new Error(`HTTP ${resp.status}`);
+                        }
+                        const csvText = await resp.text();
+                        if (!csvText || csvText.trim().startsWith('<!DOCTYPE html') || csvText.trim().startsWith('<html')) {
+                            throw new Error('Respons berupa halaman HTML (pastikan sheet sudah dipublikasikan sebagai CSV & gid benar).');
+                        }
+                        return handleCsvPayload(csvText, `Google Sheets Live (${candidate.label})`, autoCloseModal);
+                    } catch (attemptErr) {
+                        lastError = attemptErr;
+                    }
+                }
+
+                throw lastError || new Error('Semua jalur koneksi gagal.');
             } catch (err) {
                 const errMsg = `Gagal memuat dari Google Sheets: ${err.message}`;
                 showModalDiagnostic(errMsg, true);
                 if (!silentOnFail) {
-                    showToast('Gagal memuat tautan Google Sheets. Menampilkan data tersemat.', 'error');
+                    showToast(`Gagal koneksi GSheet (${err.message}). Menampilkan data tersemat.`, 'error');
                 }
                 return false;
             } finally {
@@ -2186,89 +2205,51 @@
             }
         }
 
-        async function fetchGoogleSheetsCSV() {
-            const inp = document.getElementById('gsheetUrlInput');
-            const url = inp ? inp.value.trim() : getSavedGsheetUrl();
-            await loadGsheetFromUrl(url, { silentOnFail: false, autoCloseModal: true });
-        }
-
         async function syncConfiguredGoogleSheet(showFeedback = true) {
             const url = getSavedGsheetUrl();
-            const ok = await loadGsheetFromUrl(url, { silentOnFail: !showFeedback, autoCloseModal: false });
-            if (!ok && showFeedback) {
-                showToast('Sinkronisasi GSheet gagal; periksa publikasi CSV di Google Sheets.', 'error');
+            if (showFeedback) {
+                showToast('Menyinkronkan data dari Google Sheets...', 'success');
             }
-        }
-
-        function downloadSampleCSV() {
-            const sampleLines = [
-                "43589;;;;;;;;;;;;;;;;",
-                "no;FA ID;NOMEN;ENTITY NAME;ADDRESS;AREA BUSINESS;SUBKON 2;FA STATUS 2;FA Diterima;RECEIVED DT;Work Date;Day Receive Date;Month Receive Date;Year Receive Date;Tgl Work Date;Month Date;Year Work Date;MINGGUAN ;Pending Status 2;NOTE",
-                "1;FA-2611-08491;011482910;PT Mitra Sejahtera;Jl. Daan Mogot Km 14;Cengkareng;PT Dinara Arshan Sejahtera;Selesai Dikerjakan;2026;2026-11-18;2026-11-20;18;11;2026;20;11;2026;15 Nov 2026 s/d 21 Nov 2026;-;Meter terpasang",
-                "2;FA-2611-08492;022918341;Budi Santoso;Jl. Pondok Indah Raya;Pondok indah Bintaro;PT Shima Citra Selaras;Pending;2026;2026-11-19;;19;11;2026;;;;;Konfirmasi Jadwal Pelanggan;Menunggu akses penghuni",
-                "3;FA-2611-08493;031948275;CV Karya Mandiri;Jl. Dharmawangsa X;Dharmawangsa;PT Anugerah Nusa Sentosa (DW);Selesai Dikerjakan;2026;2026-11-16;2026-11-18;16;11;2026;18;11;2026;15 Nov 2026 s/d 21 Nov 2026;-;Instalasi DN 20 selesai"
-            ];
-            const blob = new Blob([sampleLines.join("\n")], { type: "text/csv;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "contoh_export_FA_DJP_PCS.csv";
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function resetToDefaultData() {
-            appData = buildEmbeddedRealDataset();
-            state.selectedArea = 'ALL';
-            refreshAllSheets();
-            showToast('Dasbor dikembalikan ke Data Riil Tersemat (43.589 FA).');
+            return await loadGsheetFromUrl(url, {
+                silentOnFail: !showFeedback,
+                autoCloseModal: false
+            });
         }
 
         function exportDashboardCSV() {
-            try {
-                const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-                let csvLines = [];
+            const rows = (explorerState && Array.isArray(explorerState.filteredRows) && explorerState.filteredRows.length > 0)
+                ? explorerState.filteredRows
+                : (appData && Array.isArray(appData.rawRows) ? appData.rawRows : []);
 
-                if (Array.isArray(appData.rawRows) && appData.rawRows.length > 0) {
-                    const headers = [
-                        "FA ID", "NOMEN", "ENTITY NAME", "ADDRESS", "AREA BUSINESS",
-                        "SUBKON 2", "FA STATUS 2", "FA Diterima", "RECEIVED DT",
-                        "Work Date", "MINGGUAN", "Pending Status 2", "NOTE"
-                    ];
-                    csvLines.push(headers.map(escapeCsv).join(';'));
-                    appData.rawRows.forEach(r => {
-                        csvLines.push([
-                            r.faId, r.nomen, r.entity, r.address, r.area,
-                            r.subkon, r.status, r.periode, r.recDt,
-                            r.workDt, r.mingguan, r.pendingStatus2, r.note
-                        ].map(escapeCsv).join(';'));
-                    });
-                } else {
-                    const overall = computeOverallData();
-                    csvLines.push(["Bisnis Area", "Canceled", "Selesai Dikerjakan", "Pending", "Grand Total"].map(escapeCsv).join(';'));
-                    CANONICAL_AREAS.forEach(area => {
-                        const row = overall[area] || { canceled: 0, selesai: 0, pending: 0 };
-                        const total = row.canceled + row.selesai + row.pending;
-                        csvLines.push([area, row.canceled, row.selesai, row.pending, total].map(escapeCsv).join(';'));
-                    });
-                }
-
-                const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                const stamp = new Date().toISOString().slice(0, 10);
-                a.href = url;
-                a.download = `monitoring_FA_DJP_PCS_${stamp}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast(`File CSV berhasil diunduh (${Math.max(0, csvLines.length - 1).toLocaleString('id-ID')} baris).`);
-            } catch (err) {
-                showToast('Gagal mengekspor CSV: ' + err.message, 'error');
+            if (!rows || rows.length === 0) {
+                showToast('Tidak ada data untuk diekspor.', 'error');
+                return;
             }
+
+            const headers = [
+                "FA ID", "NOMEN", "ENTITY NAME", "ADDRESS", "AREA BUSINESS",
+                "SUBKON 2", "FA STATUS 2", "FA Diterima", "RECEIVED DT",
+                "Work Date", "MINGGUAN", "Pending Status 2", "NOTE"
+            ];
+            const escapeCsv = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+            const csvLines = [
+                headers.join(';'),
+                ...rows.map(r => [
+                    r.faId, r.nomen, r.entity, r.address, r.area,
+                    r.subkon, r.status, r.periode, r.recDt,
+                    r.workDt, r.mingguan, r.pendingStatus2, r.note
+                ].map(escapeCsv).join(';'))
+            ];
+
+            const blob = new Blob(["\uFEFF" + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `monitoring_FA_DJP_PCS_${rows.length}_rows.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Berhasil mengunduh ${fmt(rows.length)} baris CSV.`);
         }
-        window.exportDashboardCSV = exportDashboardCSV;
 
         function refreshAllSheets() {
             renderTopSection();
@@ -2278,6 +2259,9 @@
             populateExplorerSubkonDropdown();
             applyExplorerFilters();
         }
+
+        window.syncConfiguredGoogleSheet = syncConfiguredGoogleSheet;
+        window.exportDashboardCSV = exportDashboardCSV;
 
         window.addEventListener('DOMContentLoaded', () => {
             refreshAllSheets();
