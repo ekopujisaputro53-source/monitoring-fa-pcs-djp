@@ -533,8 +533,11 @@
             "Juli", "Agustus", "September", "Oktober", "November", "Desember"
         ];
 
-        const DEFAULT_GSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTa503Ts4hdKyEK9btQlddhasFBWPEcMETuajPNbFMG8bb03bZzNJ3j2ToHi0DajNC2L7JEjOxMtR9D/pub?gid=1200174554&single=true&output=csv";
-        const STORAGE_KEY_GSHEET_URL = "fa_pcs_djp_gsheet_csv_url_v2";
+        const GSHEET_DOC_ID = "102xqbuIstUGkxxldOBCv161fjO16rnTRhOQUU-wFS7w";
+        const GSHEET_TAB_GID = "1200174554";
+        const DEFAULT_GSHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${GSHEET_DOC_ID}/export?format=csv&gid=${GSHEET_TAB_GID}`;
+        const FALLBACK_GVIZ_CSV_URL = `https://docs.google.com/spreadsheets/d/${GSHEET_DOC_ID}/gviz/tq?tqx=out:csv&gid=${GSHEET_TAB_GID}`;
+        const STORAGE_KEY_GSHEET_URL = "fa_pcs_djp_gsheet_csv_url_v3";
 
         function getSavedGsheetUrl() {
             return DEFAULT_GSHEET_CSV_URL;
@@ -1919,25 +1922,114 @@
 
             const headers = allRows[headerRowIdx].map(h => h.trim().toUpperCase());
 
-            const areaIndices = [];
-            headers.forEach((h, idx) => { if (h === 'AREA BUSINESS') areaIndices.push(idx); });
+            // Helper pencocokan kolom secara fleksibel & pemecah tanggal otomatis
+            const findColIdx = (candidates, partialMatchFn = null) => {
+                for (const name of candidates) {
+                    const idx = headers.indexOf(name);
+                    if (idx >= 0) return idx;
+                }
+                if (partialMatchFn) {
+                    return headers.findIndex(partialMatchFn);
+                }
+                return -1;
+            };
 
-            const idxFaId           = headers.indexOf('FA ID');
-            const idxNomen          = headers.indexOf('NOMEN');
-            const idxEntity         = headers.indexOf('ENTITY NAME');
-            const idxAddress        = headers.indexOf('ADDRESS');
-            const idxSubkon2        = headers.indexOf('SUBKON 2');
-            const idxStatus2        = headers.indexOf('FA STATUS 2');
-            const idxFaDiterima     = headers.indexOf('FA DITERIMA');
-            const idxRecDt          = headers.indexOf('RECEIVED DT');
-            const idxWorkDt         = headers.indexOf('WORK DATE');
-            const idxDayRec         = headers.indexOf('DAY RECEIVE DATE');
-            const idxMonthRec       = headers.indexOf('MONTH RECEIVE DATE');
-            const idxYearRec        = headers.indexOf('YEAR RECEIVE DATE');
-            const idxTglWork        = headers.indexOf('TGL WORK DATE');
-            const idxMonthWork      = headers.indexOf('MONTH DATE');
-            const idxYearWork       = headers.indexOf('YEAR WORK DATE');
-            const idxMingguan       = headers.indexOf('MINGGUAN');
+            const monthTextToNum = {
+                'JAN': 1, 'JANUARI': 1, 'JANUARY': 1,
+                'FEB': 2, 'FEBRUARI': 2, 'FEBRUARY': 2,
+                'MAR': 3, 'MARET': 3, 'MARCH': 3,
+                'APR': 4, 'APRIL': 4,
+                'MEI': 5, 'MAY': 5,
+                'JUN': 6, 'JUNI': 6, 'JUNE': 6,
+                'JUL': 7, 'JULI': 7, 'JULY': 7,
+                'AGU': 8, 'AGUSTUS': 8, 'AUG': 8, 'AUGUST': 8,
+                'SEP': 9, 'SEPTEMBER': 9,
+                'OKT': 10, 'OKTOBER': 10, 'OCT': 10, 'OCTOBER': 10,
+                'NOV': 11, 'NOVEMBER': 11,
+                'DES': 12, 'DESEMBER': 12, 'DEC': 12, 'DECEMBER': 12
+            };
+
+            const parseMonthVal = (raw) => {
+                if (!raw) return NaN;
+                const s = String(raw).trim().toUpperCase();
+                if (!s || s === '-') return NaN;
+                const n = parseInt(s, 10);
+                if (!isNaN(n) && n >= 1 && n <= 12 && /^\d+$/.test(s)) return n;
+                for (const [k, v] of Object.entries(monthTextToNum)) {
+                    if (s === k || s.startsWith(k)) return v;
+                }
+                return NaN;
+            };
+
+            const parseFlexDateParts = (raw) => {
+                if (!raw) return null;
+                const s = String(raw).trim();
+                if (!s || s === '-') return null;
+                // Format YYYY-MM-DD atau YYYY/MM/DD (opsional jam)
+                let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+                if (m) return { year: parseInt(m[1], 10), month: parseInt(m[2], 10), day: parseInt(m[3], 10) };
+                // Format DD/MM/YYYY atau DD-MM-YYYY (juga mendukung tahun 2 digit misal 24/11/26)
+                m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+                if (m) {
+                    let y = parseInt(m[3], 10);
+                    if (y < 100) y += 2000;
+                    const p1 = parseInt(m[1], 10);
+                    const p2 = parseInt(m[2], 10);
+                    // Jika p2 > 12 (format MM/DD/YYYY), tukar bulan & tanggal
+                    if (p2 > 12 && p1 <= 12) return { day: p2, month: p1, year: y };
+                    return { day: p1, month: p2, year: y };
+                }
+                // Format DD-MMM-YYYY atau DD MMM YY (misal 24-Nov-2026 atau 24 Nov 26)
+                m = s.match(/^(\d{1,2})[-\/\s]([A-Za-z]+)[-\/\s](\d{2,4})/);
+                if (m) {
+                    const mo = parseMonthVal(m[2]);
+                    let y = parseInt(m[3], 10);
+                    if (y < 100) y += 2000;
+                    if (!isNaN(mo)) return { day: parseInt(m[1], 10), month: mo, year: y };
+                }
+                // Nomor seri tanggal Excel (misal 46350 untuk Nov 2026)
+                if (/^\d{5}(\.\d+)?$/.test(s)) {
+                    const serial = Math.floor(parseFloat(s));
+                    if (serial >= 40000 && serial <= 60000) {
+                        const utc = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+                        return { year: utc.getUTCFullYear(), month: utc.getUTCMonth() + 1, day: utc.getUTCDate() };
+                    }
+                }
+                return null;
+            };
+
+            const normalizeYearVal = (raw) => {
+                if (!raw) return NaN;
+                const n = parseInt(String(raw).trim(), 10);
+                if (isNaN(n)) return NaN;
+                return n < 100 ? n + 2000 : n;
+            };
+
+            const areaIndices = [];
+            headers.forEach((h, idx) => { if (h === 'AREA BUSINESS' || h.includes('BISNIS AREA') || h.includes('AREA')) areaIndices.push(idx); });
+
+            const idxFaId           = findColIdx(['FA ID'], h => h.includes('FA ID') || h === 'FA_ID');
+            const idxNomen          = findColIdx(['NOMEN'], h => h.includes('NOMEN'));
+            const idxEntity         = findColIdx(['ENTITY NAME'], h => h.includes('ENTITY') || h.includes('NAMA'));
+            const idxAddress        = findColIdx(['ADDRESS'], h => h.includes('ADDRESS') || h.includes('ALAMAT'));
+            const idxSubkon2        = findColIdx(['SUBKON 2', 'SUBKON'], h => h.includes('SUBKON'));
+            const idxStatus2        = findColIdx(
+                ['FA STATUS 2', 'FA STATUS2', 'FA_STATUS_2', 'FA STATUS', 'STATUS 2', 'STATUS2', 'STATUS'],
+                h => h.includes('STATUS')
+            );
+            const idxFaDiterima     = findColIdx(['FA DITERIMA'], h => h.includes('FA DITERIMA'));
+            const idxRecDt          = findColIdx(['RECEIVED DT', 'RECEIVE DATE', 'RECEIVED DATE'], h => h.includes('RECEIVED') || h.includes('RECEIVE DATE'));
+            const idxWorkDt         = findColIdx(
+                ['WORK DATE', 'WORK DT', 'TANGGAL KERJA', 'TGL KERJA', 'TGL DIKERJAKAN', 'TANGGAL DIKERJAKAN', 'COMPLETION DATE', 'COMPLETED DATE', 'EXECUTION DATE', 'SOLVED DATE'],
+                h => (h.includes('WORK') || h.includes('KERJA') || h.includes('COMPLET') || h.includes('SELESAI')) && (h.includes('DATE') || h.includes('DT') || h.includes('TGL') || h.includes('TANGGAL'))
+            );
+            const idxDayRec         = findColIdx(['DAY RECEIVE DATE', 'TGL RECEIVE DATE'], h => h.includes('DAY') && h.includes('REC'));
+            const idxMonthRec       = findColIdx(['MONTH RECEIVE DATE'], h => h.includes('MONTH') && h.includes('REC'));
+            const idxYearRec        = findColIdx(['YEAR RECEIVE DATE'], h => h.includes('YEAR') && h.includes('REC'));
+            const idxTglWork        = findColIdx(['TGL WORK DATE', 'DAY WORK DATE', 'TGL WORK'], h => (h.includes('TGL') || h.includes('DAY')) && h.includes('WORK'));
+            const idxMonthWork      = findColIdx(['MONTH DATE', 'MONTH WORK DATE', 'BULAN WORK'], h => (h.includes('MONTH') || h.includes('BULAN')) && (h.includes('WORK') || h === 'MONTH DATE'));
+            const idxYearWork       = findColIdx(['YEAR WORK DATE', 'YEAR DATE', 'TAHUN WORK'], h => (h.includes('YEAR') || h.includes('TAHUN')) && (h.includes('WORK') || h === 'YEAR DATE'));
+            const idxMingguan       = findColIdx(['MINGGUAN'], h => h.includes('MINGGUAN') || h.includes('WEEK'));
             const idxPendingStatus2 = (() => {
                 const exactTypoIdx = headers.indexOf('PENDING SATTUS 2');
                 if (exactTypoIdx >= 0) return exactTypoIdx;
@@ -1945,7 +2037,7 @@
                 if (stdIdx >= 0) return stdIdx;
                 return headers.findIndex(h => h.includes('PENDING') && h.includes('2'));
             })();
-            const idxNote           = headers.indexOf('NOTE');
+            const idxNote           = findColIdx(['NOTE'], h => h.includes('NOTE') || h.includes('KET'));
             const idxGmap           = headers.findIndex(h => ['GMAP', 'MAPS', 'GOOGLE MAPS', 'KOORDINAT', 'LOKASI', 'LINK'].some(k => h.includes(k)));
 
             const newPre2026 = {};
@@ -1969,6 +2061,7 @@
             }
 
             let validCount = 0;
+            const rawStatusCounts = {};
 
             for (let r = headerRowIdx + 1; r < allRows.length; r++) {
                 const row = allRows[r];
@@ -1984,19 +2077,48 @@
                 const area = normalizeBusinessArea(rawArea);
                 if (!area) continue;
 
-                const statusRaw = (row[idxStatus2] || '').trim().toLowerCase();
-                if (!statusRaw) continue;
+                const statusCellVal = idxStatus2 >= 0 ? (row[idxStatus2] || '').trim() : '';
+                const statusRaw = statusCellVal.toLowerCase().replace(/\s+/g, ' ');
+                if (!statusRaw || statusRaw === '-') continue;
 
+                rawStatusCounts[statusCellVal] = (rawStatusCounts[statusCellVal] || 0) + 1;
+
+                // Normalisasi status dengan toleransi spasi ganda & variasi penulisan
+                const compactStatus = statusRaw.replace(/[^a-z0-9]+/g, ' ').trim();
                 let statusKey = 'pending';
                 let statusLabel = 'Pending';
-                if (statusRaw.includes('cancel')) { statusKey = 'canceled'; statusLabel = 'Canceled'; }
-                else if (statusRaw.includes('selesai')) { statusKey = 'selesai'; statusLabel = 'Selesai Dikerjakan'; }
-                else if (statusRaw.includes('pending')) { statusKey = 'pending'; statusLabel = 'Pending'; }
+                if (
+                    /\b(cancel|batal|drop|tolak|reject|batalin|dibatalkan)\b/.test(compactStatus) ||
+                    statusRaw.includes('cancel') ||
+                    statusRaw.includes('batal') ||
+                    statusRaw.includes('drop') ||
+                    statusRaw.includes('tolak') ||
+                    statusRaw.includes('reject')
+                ) {
+                    statusKey = 'canceled';
+                    statusLabel = 'Canceled';
+                } else if (
+                    /\b(selesai|done|terpasang|complete|completed|closed|sukses|berhasil|finish|finished|solved)\b/.test(compactStatus) ||
+                    statusRaw.includes('selesai') ||
+                    statusRaw.includes('dikerjakan') ||
+                    statusRaw.includes('done') ||
+                    statusRaw.includes('terpasang') ||
+                    statusRaw.includes('complet') ||
+                    statusRaw.includes('closed') ||
+                    statusRaw.includes('sukses') ||
+                    statusRaw.includes('berhasil')
+                ) {
+                    statusKey = 'selesai';
+                    statusLabel = 'Selesai Dikerjakan';
+                } else {
+                    statusKey = 'pending';
+                    statusLabel = 'Pending';
+                }
 
                 validCount++;
 
                 const faDitRaw = idxFaDiterima >= 0 ? (row[idxFaDiterima] || '').trim() : '';
-                const yearRec = idxYearRec >= 0 ? parseInt(row[idxYearRec], 10) : NaN;
+                const yearRec = idxYearRec >= 0 ? normalizeYearVal(row[idxYearRec]) : NaN;
                 const isPre2026 = faDitRaw.includes('<') ? true : (faDitRaw === '2026' ? false : (!isNaN(yearRec) && yearRec < 2026));
 
                 if (isPre2026) newPre2026[area][statusKey]++;
@@ -2006,22 +2128,53 @@
                     ? row[idxSubkon2].trim()
                     : 'Subkon Lainnya / Belum Plot';
 
-                const dayRec = idxDayRec >= 0 ? parseInt(row[idxDayRec], 10) : NaN;
-                const monthRec = idxMonthRec >= 0 ? parseInt(row[idxMonthRec], 10) : NaN;
-                if (yearRec === 2026 && monthRec >= 1 && monthRec <= 12 && dayRec >= 1 && dayRec <= 31) {
+                const rawRecDtStr = idxRecDt >= 0 ? (row[idxRecDt] || '').trim() : '';
+                const parsedRecObj = parseFlexDateParts(rawRecDtStr);
+                const dayRec = (idxDayRec >= 0 && !isNaN(parseInt(row[idxDayRec], 10))) ? parseInt(row[idxDayRec], 10) : (parsedRecObj ? parsedRecObj.day : NaN);
+                const monthRec = (idxMonthRec >= 0 && !isNaN(parseMonthVal(row[idxMonthRec]))) ? parseMonthVal(row[idxMonthRec]) : (parsedRecObj ? parsedRecObj.month : NaN);
+                const effYearRec = !isNaN(yearRec) ? yearRec : (parsedRecObj ? parsedRecObj.year : NaN);
+
+                if (effYearRec === 2026 && monthRec >= 1 && monthRec <= 12 && dayRec >= 1 && dayRec <= 31) {
                     newDiterimaByMonth[monthRec][area][dayRec - 1]++;
                 }
 
-                const tglWork = idxTglWork >= 0 ? parseInt(row[idxTglWork], 10) : NaN;
-                const monthWork = idxMonthWork >= 0 ? parseInt(row[idxMonthWork], 10) : NaN;
-                const yearWork = idxYearWork >= 0 ? parseInt(row[idxYearWork], 10) : NaN;
-                const wkStr = (idxMingguan >= 0 && row[idxMingguan]) ? row[idxMingguan].trim() : '-';
+                const rawWorkDtStr = idxWorkDt >= 0 ? (row[idxWorkDt] || '').trim() : '';
+                const parsedWorkObj = parseFlexDateParts(rawWorkDtStr);
+                const tglWork = (idxTglWork >= 0 && !isNaN(parseInt(row[idxTglWork], 10))) ? parseInt(row[idxTglWork], 10) : (parsedWorkObj ? parsedWorkObj.day : NaN);
+                const monthWork = (idxMonthWork >= 0 && !isNaN(parseMonthVal(row[idxMonthWork]))) ? parseMonthVal(row[idxMonthWork]) : (parsedWorkObj ? parsedWorkObj.month : NaN);
+                let yearWork = (idxYearWork >= 0 && !isNaN(normalizeYearVal(row[idxYearWork]))) ? normalizeYearVal(row[idxYearWork]) : (parsedWorkObj ? parsedWorkObj.year : NaN);
+                // Jika kolom Tgl/Month/Year Work Date tidak terisi namun WORK DATE berisi serial/tanggal, utamakan hasil parse WORK DATE
+                const finalTglWork = (!isNaN(tglWork) && tglWork >= 1 && tglWork <= 31)
+                    ? tglWork
+                    : (parsedWorkObj ? parsedWorkObj.day : (statusKey === 'selesai' && !isPre2026 ? dayRec : NaN));
+                const finalMonthWork = (!isNaN(monthWork) && monthWork >= 1 && monthWork <= 12)
+                    ? monthWork
+                    : (parsedWorkObj ? parsedWorkObj.month : (statusKey === 'selesai' && !isPre2026 ? monthRec : NaN));
+                let finalYearWork = (!isNaN(yearWork))
+                    ? yearWork
+                    : (parsedWorkObj ? parsedWorkObj.year : (statusKey === 'selesai' && !isPre2026 ? effYearRec : NaN));
+                // Jika status Selesai Dikerjakan pada periode 2026 tetapi tahun work date tidak tertulis eksplisit, gunakan 2026
+                if (isNaN(finalYearWork) && statusKey === 'selesai' && !isPre2026 && finalMonthWork >= 1 && finalMonthWork <= 12 && finalTglWork >= 1 && finalTglWork <= 31) {
+                    finalYearWork = 2026;
+                }
+                const effTglWork = finalTglWork;
+                const effMonthWork = finalMonthWork;
+                const effYearWork = finalYearWork;
+                let wkStr = (idxMingguan >= 0 && row[idxMingguan]) ? row[idxMingguan].trim() : '-';
 
-                if (yearWork === 2026 && statusKey === 'selesai') {
-                    if (monthWork >= 1 && monthWork <= 12 && tglWork >= 1 && tglWork <= 31) {
-                        newDikerjakanByMonth[monthWork][area][tglWork - 1]++;
-                        if (yearRec === 2026 && monthRec === monthWork && dayRec === tglWork) {
-                            newSameDayByMonth[monthWork][area][tglWork - 1]++;
+                if (effYearWork === 2026 && statusKey === 'selesai') {
+                    if (effMonthWork >= 1 && effMonthWork <= 12 && effTglWork >= 1 && effTglWork <= 31) {
+                        newDikerjakanByMonth[effMonthWork][area][effTglWork - 1]++;
+                        if (effYearRec === 2026 && monthRec === effMonthWork && dayRec === effTglWork) {
+                            newSameDayByMonth[effMonthWork][area][effTglWork - 1]++;
+                        }
+                        // Fallback otomatis label mingguan November 2026 jika kolom MINGGUAN kosong
+                        if ((!wkStr || wkStr === '-' || wkStr.toLowerCase() === 'null') && effMonthWork === 11) {
+                            if (effTglWork <= 7) wkStr = '01 Nov 2026 s/d 07 Nov 2026';
+                            else if (effTglWork <= 14) wkStr = '08 Nov 2026 s/d 14 Nov 2026';
+                            else if (effTglWork <= 21) wkStr = '15 Nov 2026 s/d 21 Nov 2026';
+                            else if (effTglWork <= 28) wkStr = '22 Nov 2026 s/d 28 Nov 2026';
+                            else wkStr = '29 Nov 2026 s/d 30 Nov 2026';
                         }
                     }
                     if (wkStr && wkStr !== '-' && wkStr.toLowerCase() !== 'null') {
@@ -2044,14 +2197,14 @@
                     subkon: subkonName,
                     status: statusLabel,
                     periode: isPre2026 ? '<2026' : '2026',
-                    recDt: idxRecDt >= 0 ? (row[idxRecDt] || '-').trim() : '-',
-                    workDt: idxWorkDt >= 0 ? (row[idxWorkDt] || '-').trim() : '-',
-                    recYear: yearRec,
+                    recDt: rawRecDtStr || '-',
+                    workDt: rawWorkDtStr || '-',
+                    recYear: effYearRec,
                     recMonth: monthRec,
                     recDay: dayRec,
-                    workYear: yearWork,
-                    workMonth: monthWork,
-                    workDay: tglWork,
+                    workYear: effYearWork,
+                    workMonth: effMonthWork,
+                    workDay: effTglWork,
                     mingguan: wkStr || '-',
                     pendingStatus2: rawPendingStatus2 || '-',
                     note: rawNote || '-'
@@ -2078,7 +2231,16 @@
             });
 
             const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const diagMsg = `${sourceLabel}: ${fmt(validCount)} baris terbaca (header baris ke-${headerRowIdx + 1}, pemisah '${delimiter}') • Sync ${nowTime}`;
+            const sampleWork = parsedRawRows.find(r => r.status === 'Selesai Dikerjakan' && r.workDt !== '-');
+            const workInfo = sampleWork
+                ? `WorkDate="${sampleWork.workDt}" (Y:${sampleWork.workYear || '?'}, M:${sampleWork.workMonth || '?'})`
+                : `Kolom WorkDate=${idxWorkDt >= 0 ? headers[idxWorkDt] : 'TIDAK KETEMU'}`;
+            const statusSummary = Object.entries(rawStatusCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+                .map(([k, v]) => `${k}:${fmt(v)}`)
+                .join(' | ');
+            const diagMsg = `${sourceLabel}: ${fmt(validCount)} baris • ColStatus=${idxStatus2 >= 0 ? headers[idxStatus2] : 'NONE'} [${statusSummary || '-'}] • ${workInfo} • Sync ${nowTime}`;
 
             appData = {
                 isCustom: true,
@@ -2125,14 +2287,17 @@
             const iconSync = document.getElementById('iconSyncGsheet');
             if (iconSync) iconSync.classList.add('animate-spin');
 
-            const cacheBuster = url.includes('?') ? `&_ts=${Date.now()}` : `?_ts=${Date.now()}`;
-            const targetUrl = url + cacheBuster;
+            const ts = Date.now();
+            const addTs = (u) => u + (u.includes('?') ? `&_ts=${ts}` : `?_ts=${ts}`);
+            const targetExportUrl = addTs(url);
+            const targetGvizUrl = addTs(FALLBACK_GVIZ_CSV_URL);
 
-            // Jalur pengambilan: langsung -> fallback CORS proxy
+            // Jalur pengambilan: export CSV langsung -> GViz CSV langsung -> CORS proxy fallback
             const fetchCandidates = [
-                { label: 'Langsung', endpoint: targetUrl },
-                { label: 'CORS Proxy 1', endpoint: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}` },
-                { label: 'CORS Proxy 2', endpoint: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` }
+                { label: 'GSheet Export CSV', endpoint: targetExportUrl },
+                { label: 'GSheet GViz CSV', endpoint: targetGvizUrl },
+                { label: 'CORS Proxy 1', endpoint: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetExportUrl)}` },
+                { label: 'CORS Proxy 2', endpoint: `https://corsproxy.io/?${encodeURIComponent(targetGvizUrl)}` }
             ];
 
             let lastError = null;
