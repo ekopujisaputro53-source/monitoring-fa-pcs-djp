@@ -154,7 +154,11 @@
             <nav class="flex items-center gap-1.5 overflow-x-auto pt-1" aria-label="Sheet Navigation">
                 <button onclick="switchSheet('pivot')" id="sheetTab-pivot" class="px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm">
                     <span class="w-2 h-2 rounded-full bg-blue-400"></span>
-                    <span>Dashboard Pivot &amp; Tren</span>
+                    <span>Dashboard Analisa &amp; Tren</span>
+                </button>
+                <button onclick="switchSheet('pendingPivot')" id="sheetTab-pendingPivot" class="px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>Analisa Pending Status 2 &amp; NOTE</span>
                 </button>
                 <button onclick="switchSheet('explorer')" id="sheetTab-explorer" class="px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition">
                     <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -408,7 +412,63 @@
     </main>
 
     <!-- ===================================================================== -->
-    <!-- TAB 2: TAMPILAN DATA (FA DJP - PCS)                                   -->
+    <!-- SHEET 2: ANALISA PENDING STATUS 2 & NOTE                              -->
+    <!-- ===================================================================== -->
+    <main id="sheetView-pendingPivot" class="hidden max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+
+        <!-- Filter & Summary Toolbar -->
+        <section class="glass-card rounded-2xl p-3.5 sm:px-5 flex flex-wrap items-center justify-between gap-3 border border-amber-500/25 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-transparent">
+            <div class="flex flex-wrap items-center gap-1.5" id="ppAreaButtonsContainer"></div>
+
+            <div class="relative">
+                <input type="text" id="ppSearchInput" oninput="renderPendingNotePivotSheet()" placeholder="Filter kata kunci kategori..." class="bg-pitch border border-borderSubtle rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 w-52">
+            </div>
+        </section>
+
+        <!-- KPI Strip for Pending Status 2 & NOTE -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" id="ppKpiCards"></section>
+
+        <!-- Pivot Table 1: PENDING STATUS 2 x AREA BUSINESS -->
+        <section class="glass-card rounded-2xl overflow-hidden shadow-xl shadow-black/50">
+            <div class="px-4 sm:px-6 py-4 border-b border-borderSubtle flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gradient-to-r from-amber-500/15 via-orange-500/5 to-transparent">
+                <div>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-amber-400">Tabel Analisa 1 • Count of FA ID</span>
+                    <h3 class="text-sm sm:text-base font-bold text-white">ANALISA FA PENDING STATUS 2 × BISNIS AREA</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="ppPendingTotalBadge" class="px-2.5 py-1 text-xs font-mono font-semibold rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">Total: 0 FA</span>
+                    <button onclick="exportPendingNotePivotCSV('pendingStatus2')" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-600/80 hover:bg-amber-500 text-white transition">
+                        Export Analisa CSV
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto max-h-[480px]">
+                <table class="w-full text-xs text-left border-collapse tabular-nums" id="tablePivotPendingStatus2"></table>
+            </div>
+        </section>
+
+        <!-- Pivot Table 2: NOTE x AREA BUSINESS -->
+        <section class="glass-card rounded-2xl overflow-hidden shadow-xl shadow-black/50">
+            <div class="px-4 sm:px-6 py-4 border-b border-borderSubtle flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gradient-to-r from-purple-500/15 via-blue-500/10 to-transparent">
+                <div>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-purple-400">Tabel Analisa 2 • Count of FA ID</span>
+                    <h3 class="text-sm sm:text-base font-bold text-white">ANALISA NOTE × BISNIS AREA</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="ppNoteTotalBadge" class="px-2.5 py-1 text-xs font-mono font-semibold rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/30">Total: 0 FA</span>
+                    <button onclick="exportPendingNotePivotCSV('note')" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white transition">
+                        Export Analisa CSV
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto max-h-[480px]">
+                <table class="w-full text-xs text-left border-collapse tabular-nums" id="tablePivotNote"></table>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: TAMPILAN DATA (FA DJP - PCS)                                   -->
     <!-- ===================================================================== -->
     <main id="sheetView-explorer" class="hidden max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5 flex-1">
         
@@ -742,7 +802,7 @@
         const state = {
             matrixMetric: 'diterima',
             matrixMonth: 11,
-            selectedAreas: [], // Kosong = semua area aktif (All); berisi 1..N nama area jika dipilih
+            selectedAreas: [],
             dailyTrendMonth: 11
         };
 
@@ -782,7 +842,6 @@
             return n.toLocaleString('id-ID');
         }
 
-        // Membuat tautan Google Maps dari kolom khusus GMAP/koordinat atau alamat + area
         function buildGoogleMapsUrl(row) {
             const rawGmap = (row.gmap || '').trim();
             if (rawGmap && rawGmap !== '-') {
@@ -823,30 +882,31 @@
         }
 
         function switchSheet(sheetKey) {
-            const pivotView = document.getElementById('sheetView-pivot');
-            const explorerView = document.getElementById('sheetView-explorer');
-            const tabPivot = document.getElementById('sheetTab-pivot');
-            const tabExplorer = document.getElementById('sheetTab-explorer');
+            const views = {
+                pivot: document.getElementById('sheetView-pivot'),
+                pendingPivot: document.getElementById('sheetView-pendingPivot'),
+                explorer: document.getElementById('sheetView-explorer')
+            };
+            const tabs = {
+                pivot: document.getElementById('sheetTab-pivot'),
+                pendingPivot: document.getElementById('sheetTab-pendingPivot'),
+                explorer: document.getElementById('sheetTab-explorer')
+            };
 
-            const isExplorer = sheetKey === 'explorer';
+            const activeCls = 'px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm';
+            const inactiveCls = 'px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition';
 
-            if (pivotView) pivotView.classList.toggle('hidden', isExplorer);
-            if (explorerView) explorerView.classList.toggle('hidden', !isExplorer);
+            Object.entries(views).forEach(([key, el]) => {
+                if (el) el.classList.toggle('hidden', key !== sheetKey);
+            });
+            Object.entries(tabs).forEach(([key, el]) => {
+                if (el) el.className = key === sheetKey ? activeCls : inactiveCls;
+            });
 
-            if (tabPivot) {
-                tabPivot.className = !isExplorer
-                    ? 'px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm'
-                    : 'px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition';
-            }
-
-            if (tabExplorer) {
-                tabExplorer.className = isExplorer
-                    ? 'px-4 py-2.5 text-xs font-semibold rounded-t-xl border-t border-x border-borderSubtle bg-card text-white flex items-center gap-2 whitespace-nowrap shadow-sm'
-                    : 'px-4 py-2.5 text-xs font-medium rounded-t-xl border-t border-x border-transparent text-slate-400 hover:text-white hover:bg-card/50 flex items-center gap-2 whitespace-nowrap transition';
-            }
-
-            if (isExplorer) {
+            if (sheetKey === 'explorer') {
                 renderExplorerTable();
+            } else if (sheetKey === 'pendingPivot') {
+                renderPendingNotePivotSheet();
             } else {
                 renderAllProgressModules();
             }
@@ -1418,7 +1478,7 @@
                 ${areaBtnsHtml}
             `;
 
-            ['globalAreaFilterContainer', 'slicerButtonsContainer'].forEach(containerId => {
+            ['globalAreaFilterContainer', 'slicerButtonsContainer', 'ppAreaButtonsContainer'].forEach(containerId => {
                 const container = document.getElementById(containerId);
                 if (container) container.innerHTML = buttonsHtml;
             });
@@ -1439,7 +1499,6 @@
                 } else {
                     state.selectedAreas.push(areaId);
                 }
-                // Jika semua area dicentang manual, kembalikan ke mode (All)
                 if (state.selectedAreas.length === CANONICAL_AREAS.length) {
                     state.selectedAreas = [];
                 }
@@ -1448,6 +1507,7 @@
             renderTopSection();
             renderDailyMatrixSection();
             renderAllProgressModules();
+            renderPendingNotePivotSheet();
         }
 
         function setDailyTrendMonth(monthNum) {
@@ -1609,7 +1669,6 @@
             const m = state.dailyTrendMonth;
             const mat = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
 
-            // Menyesuaikan rentang tanggal secara otomatis hingga tanggal tertinggi yang memiliki data (22, 23, 24+)
             let lastActiveDay = m === 11 ? 21 : 31;
             if (m === 11) {
                 for (let d = 31; d >= 22; d--) {
@@ -1645,7 +1704,225 @@
         }
 
         // =========================================================================
-        // 7. TAB 2: TAMPILAN DATA (FA DJP - PCS)
+        // 6B. SHEET 2: ANALISA PENDING STATUS 2 & NOTE
+        // =========================================================================
+        let latestPendingPivotRows = [];
+        let latestNotePivotRows = [];
+
+        function getFilteredRowsForPendingNotePivot() {
+            const searchKw  = (document.getElementById('ppSearchInput')?.value || '').trim().toLowerCase();
+            const activeAreas = getActiveAreas();
+
+            return (appData.rawRows || []).filter(r => {
+                if (r.status !== 'Pending') return false;
+                if (!activeAreas.includes(r.area)) return false;
+                if (searchKw) {
+                    const hay = `${r.pendingStatus2 || ''} ${r.note || ''} ${r.area || ''}`.toLowerCase();
+                    if (!hay.includes(searchKw)) return false;
+                }
+                return true;
+            });
+        }
+
+        function buildCrossTabPivotData(rows, fieldKey) {
+            const map = new Map();
+            rows.forEach(r => {
+                const rawVal = (r[fieldKey] || '').trim();
+                const label = (!rawVal || rawVal === '-') ? '(Kosong / Tidak Diisi)' : rawVal;
+                if (!map.has(label)) {
+                    const areaCounts = {};
+                    CANONICAL_AREAS.forEach(a => { areaCounts[a] = 0; });
+                    map.set(label, { label, areaCounts, total: 0 });
+                }
+                const entry = map.get(label);
+                if (entry.areaCounts[r.area] !== undefined) {
+                    entry.areaCounts[r.area]++;
+                }
+                entry.total++;
+            });
+
+            return Array.from(map.values()).sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
+        }
+
+        function renderCrossTabPivotTable(tableId, categoryHeader, pivotRows, filterType) {
+            const table = document.getElementById(tableId);
+            if (!table) return 0;
+
+            const visibleAreas = getActiveAreas();
+            const colTotals = {};
+            visibleAreas.forEach(a => { colTotals[a] = 0; });
+            let grandTotal = 0;
+
+            pivotRows.forEach(item => {
+                visibleAreas.forEach(a => {
+                    colTotals[a] += (item.areaCounts[a] || 0);
+                });
+                grandTotal += item.total;
+            });
+
+            const areaHeadersHtml = visibleAreas.map(a =>
+                `<th class="px-3 py-2.5 text-right font-semibold whitespace-nowrap">${a}</th>`
+            ).join('');
+
+            let bodyHtml = '';
+            if (pivotRows.length === 0) {
+                bodyHtml = `
+                    <tr>
+                        <td colspan="${visibleAreas.length + 3}" class="px-6 py-8 text-center text-slate-400">
+                            Tidak ada data yang sesuai dengan filter aktif.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                bodyHtml = pivotRows.map((item, idx) => {
+                    const pct = grandTotal > 0 ? ((item.total / grandTotal) * 100).toFixed(1).replace('.', ',') : '0,0';
+                    const safeLabel = item.label.replace(/'/g, "\\'");
+                    const areaCells = visibleAreas.map(a => {
+                        const v = item.areaCounts[a] || 0;
+                        return `<td class="px-3 py-2 text-right font-mono ${v > 0 ? 'text-slate-200' : 'text-slate-600'}">${v === 0 ? '-' : fmt(v)}</td>`;
+                    }).join('');
+
+                    return `
+                        <tr class="border-b border-borderSubtle/60 hover:bg-cardHover transition-colors">
+                            <td class="sticky-col-left px-3.5 py-2 font-sans font-medium text-slate-100 border-r border-borderSubtle min-w-[240px]">
+                                <button type="button" onclick="drillDownFromPendingNotePivot('${filterType}', '${safeLabel}')" title="Klik untuk melihat detail baris di tab Tampilan Data" class="text-left hover:text-amber-300 transition flex items-center gap-2">
+                                    <span class="text-[10px] font-mono text-slate-500 w-5 shrink-0">${idx + 1}.</span>
+                                    <span>${item.label}</span>
+                                </button>
+                            </td>
+                            ${areaCells}
+                            <td class="px-3 py-2 text-right font-mono font-bold text-white bg-slate-900/40">${fmt(item.total)}</td>
+                            <td class="px-3 py-2 text-right font-mono text-slate-400">${pct}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const footerCells = visibleAreas.map(a =>
+                `<td class="px-3 py-2.5 text-right font-mono text-slate-200">${fmt(colTotals[a])}</td>`
+            ).join('');
+
+            table.innerHTML = `
+                <thead class="sticky top-0 z-10 bg-slate-900 border-b border-borderSubtle">
+                    <tr class="text-[11px] uppercase tracking-wider text-slate-400">
+                        <th class="sticky-col-left px-3.5 py-2.5 text-left font-semibold text-slate-200 border-r border-borderSubtle min-w-[240px]">${categoryHeader}</th>
+                        ${areaHeadersHtml}
+                        <th class="px-3 py-2.5 text-right font-semibold text-blue-300 whitespace-nowrap">Grand Total</th>
+                        <th class="px-3 py-2.5 text-right font-semibold text-purple-300 whitespace-nowrap">Share</th>
+                    </tr>
+                </thead>
+                <tbody>${bodyHtml}</tbody>
+                <tfoot class="sticky bottom-0 bg-slate-900/95 border-t border-slate-700 font-bold text-white">
+                    <tr>
+                        <td class="sticky-col-left px-3.5 py-2.5 border-r border-borderSubtle">Grand Total</td>
+                        ${footerCells}
+                        <td class="px-3 py-2.5 text-right font-mono text-blue-300">${fmt(grandTotal)}</td>
+                        <td class="px-3 py-2.5 text-right font-mono text-purple-300">100%</td>
+                    </tr>
+                </tfoot>
+            `;
+
+            return grandTotal;
+        }
+
+        function renderPendingNotePivotSheet() {
+            const rows = getFilteredRowsForPendingNotePivot();
+            latestPendingPivotRows = buildCrossTabPivotData(rows, 'pendingStatus2');
+            latestNotePivotRows    = buildCrossTabPivotData(rows, 'note');
+
+            const totPendingPivot = renderCrossTabPivotTable('tablePivotPendingStatus2', 'Pending Status 2', latestPendingPivotRows, 'pendingStatus2');
+            const totNotePivot    = renderCrossTabPivotTable('tablePivotNote', 'NOTE', latestNotePivotRows, 'note');
+
+            const badgeP = document.getElementById('ppPendingTotalBadge');
+            const badgeN = document.getElementById('ppNoteTotalBadge');
+            if (badgeP) badgeP.textContent = `Total: ${fmt(totPendingPivot)} FA`;
+            if (badgeN) badgeN.textContent = `Total: ${fmt(totNotePivot)} FA`;
+
+            const topPending = latestPendingPivotRows.find(x => x.label !== '(Kosong / Tidak Diisi)') || latestPendingPivotRows[0];
+            const topNote    = latestNotePivotRows.find(x => x.label !== '(Kosong / Tidak Diisi)') || latestNotePivotRows[0];
+
+            const kpiEl = document.getElementById('ppKpiCards');
+            if (kpiEl) {
+                kpiEl.innerHTML = `
+                    <div class="glass-card rounded-2xl p-4">
+                        <p class="text-xs text-slate-400 font-medium">Total Baris Terfilter</p>
+                        <p class="text-xl sm:text-2xl font-bold text-white font-mono tabular-nums mt-1">${fmt(rows.length)}</p>
+                        <p class="text-[11px] text-blue-400 mt-1">Area: ${getActiveAreaLabel()}</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4">
+                        <p class="text-xs text-slate-400 font-medium">Kategori Pending Status 2</p>
+                        <p class="text-xl sm:text-2xl font-bold text-amber-400 font-mono tabular-nums mt-1">${fmt(latestPendingPivotRows.length)}</p>
+                        <p class="text-[11px] text-amber-300/80 mt-1 truncate" title="${topPending ? topPending.label : '-'}">Terbanyak: ${topPending ? `${topPending.label} (${fmt(topPending.total)})` : '-'}</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4">
+                        <p class="text-xs text-slate-400 font-medium">Variasi NOTE</p>
+                        <p class="text-xl sm:text-2xl font-bold text-purple-400 font-mono tabular-nums mt-1">${fmt(latestNotePivotRows.length)}</p>
+                        <p class="text-[11px] text-purple-300/80 mt-1 truncate" title="${topNote ? topNote.label : '-'}">Terbanyak: ${topNote ? `${topNote.label} (${fmt(topNote.total)})` : '-'}</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4">
+                        <p class="text-xs text-slate-400 font-medium">Sumber Baris Detail</p>
+                        <p class="text-xl sm:text-2xl font-bold text-emerald-400 font-mono tabular-nums mt-1">${appData.isCustom ? 'Live' : 'Sampel'}</p>
+                        <p class="text-[11px] text-emerald-300/80 mt-1">${fmt(appData.rawRows.length)} baris tersedia</p>
+                    </div>
+                `;
+            }
+        }
+
+        function drillDownFromPendingNotePivot(filterType, labelVal) {
+            const targetVal = labelVal === '(Kosong / Tidak Diisi)' ? '-' : labelVal;
+            switchSheet('explorer');
+            resetExplorerFilters();
+
+            const faStatusSel = document.getElementById('expFaStatusFilter');
+            if (faStatusSel) {
+                faStatusSel.value = 'Pending';
+            }
+
+            if (filterType === 'pendingStatus2') {
+                const sel = document.getElementById('expStatusFilter');
+                if (sel) sel.value = targetVal;
+            } else if (filterType === 'note') {
+                const sel = document.getElementById('expSubkonFilter');
+                if (sel) sel.value = targetVal;
+            }
+            applyExplorerFilters();
+            showToast(`Menampilkan detail Pending untuk "${labelVal}"`);
+        }
+
+        function exportPendingNotePivotCSV(typeKey) {
+            const pivotRows = typeKey === 'pendingStatus2' ? latestPendingPivotRows : latestNotePivotRows;
+            const colTitle  = typeKey === 'pendingStatus2' ? 'Pending Status 2' : 'NOTE';
+            if (!pivotRows || pivotRows.length === 0) {
+                showToast('Tidak ada data analisa untuk diekspor.', 'error');
+                return;
+            }
+            const visibleAreas = getActiveAreas();
+            const headers = [colTitle, ...visibleAreas, 'Grand Total'];
+            const escapeCsv = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const lines = [
+                headers.join(';'),
+                ...pivotRows.map(item => [
+                    item.label,
+                    ...visibleAreas.map(a => item.areaCounts[a] || 0),
+                    item.total
+                ].map(escapeCsv).join(';'))
+            ];
+            const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `analisa_${typeKey}_per_area.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`Berhasil mengunduh Analisa ${colTitle}.`);
+        }
+
+        window.renderPendingNotePivotSheet = renderPendingNotePivotSheet;
+        window.drillDownFromPendingNotePivot = drillDownFromPendingNotePivot;
+        window.exportPendingNotePivotCSV = exportPendingNotePivotCSV;
+
+        // =========================================================================
+        // 7. TAB 3: TAMPILAN DATA (FA DJP - PCS)
         // =========================================================================
         function populateExplorerSubkonDropdown() {
             const selFaStatus = document.getElementById('expFaStatusFilter');
@@ -1978,7 +2255,6 @@
 
             const headers = allRows[headerRowIdx].map(h => h.trim().toUpperCase());
 
-            // Helper pencocokan kolom secara fleksibel & pemecah tanggal otomatis
             const findColIdx = (candidates, partialMatchFn = null) => {
                 for (const name of candidates) {
                     const idx = headers.indexOf(name);
@@ -2021,21 +2297,17 @@
                 if (!raw) return null;
                 const s = String(raw).trim();
                 if (!s || s === '-') return null;
-                // Format YYYY-MM-DD atau YYYY/MM/DD (opsional jam)
                 let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
                 if (m) return { year: parseInt(m[1], 10), month: parseInt(m[2], 10), day: parseInt(m[3], 10) };
-                // Format DD/MM/YYYY atau DD-MM-YYYY (juga mendukung tahun 2 digit misal 24/11/26)
                 m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
                 if (m) {
                     let y = parseInt(m[3], 10);
                     if (y < 100) y += 2000;
                     const p1 = parseInt(m[1], 10);
                     const p2 = parseInt(m[2], 10);
-                    // Jika p2 > 12 (format MM/DD/YYYY), tukar bulan & tanggal
                     if (p2 > 12 && p1 <= 12) return { day: p2, month: p1, year: y };
                     return { day: p1, month: p2, year: y };
                 }
-                // Format DD-MMM-YYYY atau DD MMM YY (misal 24-Nov-2026 atau 24 Nov 26)
                 m = s.match(/^(\d{1,2})[-\/\s]([A-Za-z]+)[-\/\s](\d{2,4})/);
                 if (m) {
                     const mo = parseMonthVal(m[2]);
@@ -2043,7 +2315,6 @@
                     if (y < 100) y += 2000;
                     if (!isNaN(mo)) return { day: parseInt(m[1], 10), month: mo, year: y };
                 }
-                // Nomor seri tanggal Excel (misal 46350 untuk Nov 2026)
                 if (/^\d{5}(\.\d+)?$/.test(s)) {
                     const serial = Math.floor(parseFloat(s));
                     if (serial >= 40000 && serial <= 60000) {
@@ -2117,7 +2388,6 @@
             }
 
             let validCount = 0;
-            const rawStatusCounts = {};
 
             for (let r = headerRowIdx + 1; r < allRows.length; r++) {
                 const row = allRows[r];
@@ -2137,9 +2407,6 @@
                 const statusRaw = statusCellVal.toLowerCase().replace(/\s+/g, ' ');
                 if (!statusRaw || statusRaw === '-') continue;
 
-                rawStatusCounts[statusCellVal] = (rawStatusCounts[statusCellVal] || 0) + 1;
-
-                // Normalisasi status dengan toleransi spasi ganda & variasi penulisan
                 const compactStatus = statusRaw.replace(/[^a-z0-9]+/g, ' ').trim();
                 let statusKey = 'pending';
                 let statusLabel = 'Pending';
@@ -2199,7 +2466,6 @@
                 const tglWork = (idxTglWork >= 0 && !isNaN(parseInt(row[idxTglWork], 10))) ? parseInt(row[idxTglWork], 10) : (parsedWorkObj ? parsedWorkObj.day : NaN);
                 const monthWork = (idxMonthWork >= 0 && !isNaN(parseMonthVal(row[idxMonthWork]))) ? parseMonthVal(row[idxMonthWork]) : (parsedWorkObj ? parsedWorkObj.month : NaN);
                 let yearWork = (idxYearWork >= 0 && !isNaN(normalizeYearVal(row[idxYearWork]))) ? normalizeYearVal(row[idxYearWork]) : (parsedWorkObj ? parsedWorkObj.year : NaN);
-                // Jika kolom Tgl/Month/Year Work Date tidak terisi namun WORK DATE berisi serial/tanggal, utamakan hasil parse WORK DATE
                 const finalTglWork = (!isNaN(tglWork) && tglWork >= 1 && tglWork <= 31)
                     ? tglWork
                     : (parsedWorkObj ? parsedWorkObj.day : (statusKey === 'selesai' && !isPre2026 ? dayRec : NaN));
@@ -2209,7 +2475,6 @@
                 let finalYearWork = (!isNaN(yearWork))
                     ? yearWork
                     : (parsedWorkObj ? parsedWorkObj.year : (statusKey === 'selesai' && !isPre2026 ? effYearRec : NaN));
-                // Jika status Selesai Dikerjakan pada periode 2026 tetapi tahun work date tidak tertulis eksplisit, gunakan 2026
                 if (isNaN(finalYearWork) && statusKey === 'selesai' && !isPre2026 && finalMonthWork >= 1 && finalMonthWork <= 12 && finalTglWork >= 1 && finalTglWork <= 31) {
                     finalYearWork = 2026;
                 }
@@ -2224,7 +2489,6 @@
                         if (effYearRec === 2026 && monthRec === effMonthWork && dayRec === effTglWork) {
                             newSameDayByMonth[effMonthWork][area][effTglWork - 1]++;
                         }
-                        // Fallback otomatis label mingguan November 2026 jika kolom MINGGUAN kosong
                         if ((!wkStr || wkStr === '-' || wkStr.toLowerCase() === 'null') && effMonthWork === 11) {
                             if (effTglWork <= 7) wkStr = '01 Nov 2026 s/d 07 Nov 2026';
                             else if (effTglWork <= 14) wkStr = '08 Nov 2026 s/d 14 Nov 2026';
@@ -2339,7 +2603,6 @@
             const targetExportUrl = addTs(url);
             const targetGvizUrl = addTs(FALLBACK_GVIZ_CSV_URL);
 
-            // Jalur pengambilan: export CSV langsung -> GViz CSV langsung -> CORS proxy fallback
             const fetchCandidates = [
                 { label: 'GSheet Export CSV', endpoint: targetExportUrl },
                 { label: 'GSheet GViz CSV', endpoint: targetGvizUrl },
@@ -2426,6 +2689,7 @@
             renderDailyMatrixSection();
             renderSlicers();
             renderAllProgressModules();
+            renderPendingNotePivotSheet();
             populateExplorerSubkonDropdown();
             applyExplorerFilters();
         }
