@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring FA Diterima & Dikerjakan PCS - DJP</title>
+    <title>Monitoring SL Area Barat &amp; Selatan (PM Aripin Hidayat)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js & DataLabels Plugin -->
@@ -105,23 +105,36 @@
             <!-- Top Row: Title & Actions -->
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3">
                 <div class="flex items-center gap-3.5">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-accent flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    <div class="w-12 h-11 rounded-xl bg-white/95 border border-sky-400/40 px-1.5 py-1 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0" title="ABJ - Air Bersih Jakarta">
+                        <svg viewBox="0 0 140 84" class="w-full h-full" xmlns="http://www.w3.org/2000/svg" aria-label="Logo ABJ Air Bersih Jakarta">
+                            <defs>
+                                <linearGradient id="abjWaveGrad" x1="0%" y1="75%" x2="100%" y2="25%">
+                                    <stop offset="0%" stop-color="#22D3EE" />
+                                    <stop offset="55%" stop-color="#0EA5E9" />
+                                    <stop offset="100%" stop-color="#38BDF8" />
+                                </linearGradient>
+                            </defs>
+                            <!-- Huruf A -->
+                            <path d="M27 8 L45 64 L35 64 L27 38 L19 64 L9 64 Z" fill="#0F4C81" />
+                            <!-- Huruf B -->
+                            <path d="M51 8 H68 C76 8 81 12 81 19 C81 24 78 28 73 30 C79 32 83 37 83 44 C83 54 76 60 66 60 H51 V8 Z M60 16 V27 H67 C70 27 72 25 72 21.5 C72 18 70 16 67 16 H60 Z M60 35 V52 H66.5 C71 52 74 49 74 43.5 C74 38 71 35 66.5 35 H60 Z" fill="#0F4C81" />
+                            <!-- Huruf J -->
+                            <path d="M104 8 H114 V44 C114 55 107 61 96 61 C89 61 84 58 81 53 L88 47 C90 50 93 52 96.5 52 C101.5 52 104 49 104 43.5 V8 Z" fill="#0F4C81" />
+                            <!-- Gelombang Air Melintasi ABJ -->
+                            <path d="M4 63 C22 44, 48 36, 74 34 C93 32.5, 107 26, 117 17 C115 26, 103 38, 77 42 C52 46, 28 53, 12 64 Z" fill="url(#abjWaveGrad)" />
+                            <!-- Teks Air Bersih Jakarta -->
+                            <text x="70" y="77" text-anchor="middle" fill="#0284C7" font-family="Inter, Arial, sans-serif" font-size="11.5" font-weight="600" letter-spacing="0.4">Air Bersih Jakarta</text>
                         </svg>
                     </div>
                     <div>
                         <div class="flex items-center gap-2.5 flex-wrap">
                             <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
-                                Monitoring FA Diterima &amp; Dikerjakan <span class="text-gradient">PCS - DJP</span>
+                                Monitoring SL Area Barat &amp; Selatan <span class="text-gradient">(PM Aripin Hidayat)</span>
                             </h1>
                             <span id="datasetSourceBadge" class="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 tabular-nums">
                                 Data Riil Tersemat (43.589 FA)
                             </span>
                         </div>
-                        <p id="datasetDiagnosticsText" class="text-xs text-slate-400 mt-0.5">
-                            Sumber: Workbook <code class="text-purple-300">Bahan untuk Dasboard fa monitoring.xlsx</code> • Sheet <code class="text-blue-300">FA DJP - PCS</code>
-                        </p>
                     </div>
                 </div>
 
@@ -156,6 +169,12 @@
     <!-- SHEET 1: DASHBOARD PIVOT & TREN (UTAMA)                               -->
     <!-- ===================================================================== -->
     <main id="sheetView-pivot" class="max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+
+        <!-- Global Bisnis Area Filter Bar -->
+        <section class="glass-card rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 border border-blue-500/25 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-transparent">
+            <div class="flex flex-wrap items-center gap-1.5" id="globalAreaFilterContainer"></div>
+            <span class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/35 active-area-badge">(All)</span>
+        </section>
 
         <!-- KPI Quick Strip -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" id="kpiCards"></section>
@@ -500,9 +519,8 @@
 
     <!-- Footer -->
     <footer class="border-t border-borderSubtle bg-card/40 mt-10">
-        <div class="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-            <span>Monitoring FA Diterima &amp; Dikerjakan PCS - DJP • Dashboard Pivot, Tren &amp; Data Explorer</span>
-            <span>Sumber Data: <code class="text-slate-400">Bahan untuk Dasboard fa monitoring.xlsx</code> (43.589 FA)</span>
+        <div class="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-center text-center text-xs text-slate-500">
+            <span>create by : @Eko_Puji_Saputro</span>
         </div>
     </footer>
 
@@ -724,9 +742,23 @@
         const state = {
             matrixMetric: 'diterima',
             matrixMonth: 11,
-            selectedArea: 'ALL',
+            selectedAreas: [], // Kosong = semua area aktif (All); berisi 1..N nama area jika dipilih
             dailyTrendMonth: 11
         };
+
+        function getActiveAreas() {
+            return state.selectedAreas.length === 0 ? CANONICAL_AREAS : state.selectedAreas;
+        }
+
+        function getActiveAreaLabel() {
+            if (state.selectedAreas.length === 0 || state.selectedAreas.length === CANONICAL_AREAS.length) {
+                return '(All)';
+            }
+            if (state.selectedAreas.length <= 2) {
+                return state.selectedAreas.join(' + ');
+            }
+            return `${state.selectedAreas.length} Area (${state.selectedAreas.slice(0, 2).join(', ')}, +${state.selectedAreas.length - 2})`;
+        }
 
         const explorerState = {
             search: '',
@@ -823,11 +855,12 @@
 
         function buildSingleMatrixHtml(titleBanner, matrixData, accentColor = 'blue', options = {}) {
             const { monthNum = state.matrixMonth, interactiveSameDay = false, sameDayMatrix = null } = options;
+            const visibleAreas = getActiveAreas();
             const colTotals = new Array(31).fill(0);
             const sameDayColTotals = new Array(31).fill(0);
             let maxCellVal = 0;
 
-            CANONICAL_AREAS.forEach(area => {
+            visibleAreas.forEach(area => {
                 const arr = matrixData[area] || new Array(31).fill(0);
                 arr.forEach((v, idx) => {
                     if (v > maxCellVal) maxCellVal = v;
@@ -847,7 +880,7 @@
             let grandTotalAll = 0;
             let grandSameDayAll = 0;
 
-            CANONICAL_AREAS.forEach(area => {
+            visibleAreas.forEach(area => {
                 const arr = matrixData[area] || new Array(31).fill(0);
                 let rowSum = 0;
                 let rowSameDay = 0;
@@ -910,9 +943,11 @@
                 if (interactiveSameDay && sum > 0) {
                     const sdSum = sameDayColTotals[idx] || 0;
                     const dayNum = idx + 1;
+                    const targetScope = visibleAreas.length === 1 ? visibleAreas[0].replace(/'/g, "\\'") : 'ALL';
+                    const targetScopeLabel = getActiveAreaLabel();
                     footerCols += `
                         <td class="px-1 py-2 text-center font-bold text-slate-200 border-l border-borderSubtle/50">
-                            <button type="button" onclick="inspectSameDayWork('ALL', ${monthNum}, ${dayNum}, ${sum}, ${sdSum})" title="Klik untuk rekap seluruh area tanggal ${dayNum} (${sdSum} FA diterima hari sama)" class="w-full px-1 py-0.5 rounded hover:bg-purple-500/30 hover:text-purple-200 transition cursor-pointer">
+                            <button type="button" onclick="inspectSameDayWork('${targetScope}', ${monthNum}, ${dayNum}, ${sum}, ${sdSum})" title="Klik untuk rekap ${targetScopeLabel} tanggal ${dayNum} (${sdSum} FA diterima hari sama)" class="w-full px-1 py-0.5 rounded hover:bg-purple-500/30 hover:text-purple-200 transition cursor-pointer">
                                 ${sum}
                             </button>
                         </td>
@@ -1014,6 +1049,7 @@
             if (areaFilter === 'ALL') {
                 const sdMat = (appData.sameDayByMonth && appData.sameDayByMonth[monthNum]) || createEmptyMatrix31();
                 const doneMat = (appData.dikerjakanByMonth && appData.dikerjakanByMonth[monthNum]) || createEmptyMatrix31();
+                const modalAreas = getActiveAreas();
                 areaBreakdownHtml = `
                     <div class="border border-borderSubtle rounded-xl overflow-hidden bg-pitch/60">
                         <div class="px-3.5 py-2 bg-slate-900/80 border-b border-borderSubtle font-semibold text-slate-200">
@@ -1029,7 +1065,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-borderSubtle/50">
-                                ${CANONICAL_AREAS.map(a => {
+                                ${modalAreas.map(a => {
                                     const dVal = (doneMat[a] && doneMat[a][dayNum - 1]) || 0;
                                     let sVal = 0;
                                     if (exactMode) {
@@ -1147,9 +1183,10 @@
             if (!table) return { totCanceled: 0, totSelesai: 0, totPending: 0, grandTotal: 0, pctCanceled: '0.0', pctSelesai: '0.0', pctPending: '0.0' };
             let totCanceled = 0, totSelesai = 0, totPending = 0;
             const isOverall = variant === 'overall';
+            const visibleAreas = getActiveAreas();
 
             let rowsHtml = '';
-            CANONICAL_AREAS.forEach(area => {
+            visibleAreas.forEach(area => {
                 const row = dataObj[area] || { canceled: 0, selesai: 0, pending: 0 };
                 const rowTotal = row.canceled + row.selesai + row.pending;
                 totCanceled += row.canceled;
@@ -1239,8 +1276,6 @@
                     ? `Google Sheets Live (${fmt(appData.totalRows)} FA)`
                     : `Data Riil Tersemat (${fmt(appData.totalRows)} FA)`;
             }
-            const diagEl = document.getElementById('datasetDiagnosticsText');
-            if (diagEl) diagEl.textContent = appData.diagnostics;
 
             const expBadgeEl = document.getElementById('explorerRowBadge');
             if (expBadgeEl) {
@@ -1357,30 +1392,61 @@
         // 6. SHEET 1: SLICER & TREND MODULES (BULANAN, MINGGUAN, HARIAN)
         // =========================================================================
         function renderSlicers() {
-            const container = document.getElementById('slicerButtonsContainer');
-            if (!container) return;
-            const options = [{ id: 'ALL', label: '(All)' }, ...CANONICAL_AREAS.map(a => ({ id: a, label: a }))];
+            const isAllSelected = state.selectedAreas.length === 0;
+            const allBtnCls = isAllSelected
+                ? 'bg-gradient-accent text-white font-semibold shadow-md shadow-purple-500/25 border-transparent'
+                : 'bg-pitch hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 border-borderSubtle font-medium';
 
-            container.innerHTML = options.map(opt => {
-                const isActive = state.selectedArea === opt.id;
+            const areaBtnsHtml = CANONICAL_AREAS.map(area => {
+                const isActive = state.selectedAreas.includes(area);
                 const cls = isActive
                     ? 'bg-gradient-accent text-white font-semibold shadow-md shadow-purple-500/25 border-transparent'
                     : 'bg-pitch hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 border-borderSubtle font-medium';
+                const safeId = area.replace(/'/g, "\\'");
+                const checkIcon = isActive ? '<span class="mr-1 text-[10px]">✓</span>' : '';
                 return `
-                    <button onclick="selectAreaSlicer('${opt.id}')" class="px-3 py-1.5 rounded-xl text-xs border transition ${cls}">
-                        ${opt.label}
+                    <button onclick="selectAreaSlicer('${safeId}')" class="px-3 py-1.5 rounded-xl text-xs border transition inline-flex items-center ${cls}">
+                        ${checkIcon}${area}
                     </button>
                 `;
             }).join('');
 
+            const buttonsHtml = `
+                <button onclick="selectAreaSlicer('ALL')" class="px-3 py-1.5 rounded-xl text-xs border transition ${allBtnCls}">
+                    (All)
+                </button>
+                ${areaBtnsHtml}
+            `;
+
+            ['globalAreaFilterContainer', 'slicerButtonsContainer'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (container) container.innerHTML = buttonsHtml;
+            });
+
+            const badgeLabel = getActiveAreaLabel();
             document.querySelectorAll('.active-area-badge').forEach(el => {
-                el.textContent = state.selectedArea === 'ALL' ? '(All)' : state.selectedArea;
+                el.textContent = badgeLabel;
             });
         }
 
         function selectAreaSlicer(areaId) {
-            state.selectedArea = areaId;
+            if (areaId === 'ALL') {
+                state.selectedAreas = [];
+            } else {
+                const idx = state.selectedAreas.indexOf(areaId);
+                if (idx >= 0) {
+                    state.selectedAreas.splice(idx, 1);
+                } else {
+                    state.selectedAreas.push(areaId);
+                }
+                // Jika semua area dicentang manual, kembalikan ke mode (All)
+                if (state.selectedAreas.length === CANONICAL_AREAS.length) {
+                    state.selectedAreas = [];
+                }
+            }
             renderSlicers();
+            renderTopSection();
+            renderDailyMatrixSection();
             renderAllProgressModules();
         }
 
@@ -1503,16 +1569,13 @@
         function renderMonthlyProgressModule() {
             const labels = Array.from({ length: 11 }, (_, i) => `${i + 1} (${MONTH_NAMES_ID[i + 1].slice(0, 3)})`);
             const values = new Array(11).fill(0);
+            const activeAreas = getActiveAreas();
 
             for (let m = 1; m <= 11; m++) {
                 const mat = appData.dikerjakanByMonth[m] || createEmptyMatrix31();
-                if (state.selectedArea === 'ALL') {
-                    CANONICAL_AREAS.forEach(area => {
-                        values[m - 1] += (mat[area] || []).reduce((a, b) => a + b, 0);
-                    });
-                } else {
-                    values[m - 1] = (mat[state.selectedArea] || []).reduce((a, b) => a + b, 0);
-                }
+                activeAreas.forEach(area => {
+                    values[m - 1] += (mat[area] || []).reduce((a, b) => a + b, 0);
+                });
             }
 
             const total = renderProgressTable('tableProgressMonthly', 'Month Date', labels, values);
@@ -1524,16 +1587,12 @@
         function renderWeeklyProgressModule() {
             const labels = appData.weeklyLabels || [];
             const values = new Array(labels.length).fill(0);
+            const activeAreas = getActiveAreas();
 
-            if (state.selectedArea === 'ALL') {
-                CANONICAL_AREAS.forEach(area => {
-                    const arr = appData.weeklyByArea[area] || [];
-                    arr.forEach((v, i) => { if (i < values.length) values[i] += v; });
-                });
-            } else {
-                const arr = appData.weeklyByArea[state.selectedArea] || [];
-                arr.forEach((v, i) => { if (i < values.length) values[i] = v; });
-            }
+            activeAreas.forEach(area => {
+                const arr = appData.weeklyByArea[area] || [];
+                arr.forEach((v, i) => { if (i < values.length) values[i] += v; });
+            });
 
             const shortLabels = labels.map(lbl => {
                 const m = lbl.match(/^(\d{2}\s\w+)/);
@@ -1565,14 +1624,11 @@
             const maxDays = lastActiveDay;
             const labels = Array.from({ length: maxDays }, (_, i) => `${i + 1}`);
             const values = new Array(maxDays).fill(0);
+            const activeAreas = getActiveAreas();
 
-            if (state.selectedArea === 'ALL') {
-                CANONICAL_AREAS.forEach(area => {
-                    (mat[area] || []).slice(0, maxDays).forEach((v, idx) => { values[idx] += v; });
-                });
-            } else {
-                (mat[state.selectedArea] || []).slice(0, maxDays).forEach((v, idx) => { values[idx] = v; });
-            }
+            activeAreas.forEach(area => {
+                (mat[area] || []).slice(0, maxDays).forEach((v, idx) => { values[idx] += v; });
+            });
 
             const subEl = document.getElementById('dailyChartSubtitle');
             if (subEl) subEl.textContent = `Grafik Tgl Work Date (${MONTH_NAMES_ID[m]} 2026)`;
@@ -2231,16 +2287,7 @@
             });
 
             const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const sampleWork = parsedRawRows.find(r => r.status === 'Selesai Dikerjakan' && r.workDt !== '-');
-            const workInfo = sampleWork
-                ? `WorkDate="${sampleWork.workDt}" (Y:${sampleWork.workYear || '?'}, M:${sampleWork.workMonth || '?'})`
-                : `Kolom WorkDate=${idxWorkDt >= 0 ? headers[idxWorkDt] : 'TIDAK KETEMU'}`;
-            const statusSummary = Object.entries(rawStatusCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 6)
-                .map(([k, v]) => `${k}:${fmt(v)}`)
-                .join(' | ');
-            const diagMsg = `${sourceLabel}: ${fmt(validCount)} baris • ColStatus=${idxStatus2 >= 0 ? headers[idxStatus2] : 'NONE'} [${statusSummary || '-'}] • ${workInfo} • Sync ${nowTime}`;
+            const diagMsg = `${sourceLabel}: ${fmt(validCount)} baris • Sync ${nowTime}`;
 
             appData = {
                 isCustom: true,
